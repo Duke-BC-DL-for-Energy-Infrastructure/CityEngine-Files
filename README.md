@@ -2,6 +2,8 @@
 ## Purpose
 This repo contains the important CityEngine files that are used to generate synthetic overhead imagery of wind turbines. The input to this is a folder (maps) of 1300x1300 images. After using the script, it will generate four synthetic images per input image as well as corresponding black and white grouth truth images that contain information about the locations of the wind turbines.
 
+<img src="images/synthetic_wind_turbine_images/color_all_images_step608/wnd_sd0_2.png" width="300">    <img src="images/synthetic_wind_turbine_images/color_all_annos_step608/wnd_sd0_2.png" width="300">
+
 ## Using this repo
 To use this repo, you need to first [install CityEngine](https://doc.arcgis.com/en/cityengine/latest/install/os-x/installing-cityengine.htm). Once you have installed CityEngine, open up an application and create a new project. Then, you can clone/download these files and copy and paste them into the project. 
 
