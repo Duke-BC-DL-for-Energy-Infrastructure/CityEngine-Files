@@ -11,5 +11,7 @@ When running the code under '''rgb''', you will want to open up the drop down ar
 
 When running the code under '''gt''', you will want to open up the drop down arrow next to the camera icon in the 3D View window and select the 135mm telephoto lens if you haven't already and turn off Shadows and Ambient occlusion. Make sure that Axes, Compass, and Grid are off. As previously mentioned, the code under '''rgb''' should be commented out. Then, in the upper left, go to Python -> Run Script. You should see the camera moving around in the 3D view. The GT images will show up under the images/parent_folder/{display_type}_all_annos_step{step_size} (set to images/synthetic_wind_turbine_images/color_all_annos_step608).
 
+Once the RGB and GT images are created, you can now use the [Synthetic-Label-Generation](https://github.com/Duke-BC-DL-for-Energy-Infrastructure/Synthetic-Label-Generation) repo to convert the black and white grouth truth images into YOLOv3 formatted labels.
+
 ## Common Errors
 If the code does not do anything (you don't see any output or the camera isn't moving), then that means the code failed. CityEngine doesn't tell you when and where the code crashes, which makes debugging all the more fun! One common error is the parent_folder (set default to synthetic_wind_turbine_images) doesn't exist.
