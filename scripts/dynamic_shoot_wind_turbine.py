@@ -304,27 +304,24 @@ if __name__ == '__main__':
             print(sd)
             print(rule_files[display_type.index(dt)])
             load_rule_file(sd, rule_files[display_type.index(dt)])
-            #parent_folder = 'synthetic_wind_turbine_images'
-            parent_folder = 'example'
+            parent_folder = 'synthetic_wind_turbine_images'
             print(parent_folder)
             # rgb
             take_rgb_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
  
     print("DONE!")
     
-#===============================================================================
-#     ''' gt'''
-#     rule_files = gt_rule_file
-#     seed = 0
-#     random.seed(seed)
-#     for dt in display_type:
-#         for sd in range(ite_num):
-#             print(sd)
-#             print(rule_files[display_type.index(dt)])
-#             load_rule_file(sd, rule_files[display_type.index(dt)])
-#             parent_folder = 'synthetic_wind_turbine_images'
-#             print(parent_folder)
-#             #gt      
-#             take_gt_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
-#===============================================================================
+    ''' gt'''
+    rule_files = gt_rule_file
+    seed = 0
+    random.seed(seed)
+    for dt in display_type:
+        for sd in range(ite_num):
+            print(sd)
+            print(rule_files[display_type.index(dt)])
+            load_rule_file(sd, rule_files[display_type.index(dt)])
+            parent_folder = 'synthetic_wind_turbine_images'
+            print(parent_folder)
+            #gt      
+            take_gt_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
              
