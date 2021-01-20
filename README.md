@@ -15,5 +15,10 @@ When running the code under '''gt''', you will want to open up the drop down arr
 
 Once the RGB and GT images are created, you can now use the [Synthetic-Label-Generation](https://github.com/Duke-BC-DL-for-Energy-Infrastructure/Synthetic-Label-Generation) repo to convert the black and white grouth truth images into YOLOv3 formatted labels.
 
-## Common Errors
-If the code does not do anything (you don't see any output or the camera isn't moving), then that means the code failed. CityEngine doesn't tell you when and where the code crashes, which makes debugging all the more fun! One common error is the parent_folder (set default to synthetic_wind_turbine_images) doesn't exist.
+## Errors
+If the code does not do anything (you don't see any output or the camera isn't moving), then that means the code failed. CityEngine doesn't tell you when and where the code crashes, which makes debugging all the more fun! :)
+
+This repo should work as is, so keep track of anything you have changed, and that would likely be the source of any errors.
+
+One common error is the parent_folder (set default to synthetic_wind_turbine_images) doesn't exist, but as long as you have cloned this repo and haven't edited it, then that should not be an issue.
+
