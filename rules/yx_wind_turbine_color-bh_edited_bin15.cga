@@ -1,0 +1,157 @@
+/**
+ * File:    International City with Planes.cga
+ * Created: 18 Feb 2019 15:13:52 GMT
+ * Author:  Esri R&D Center Zurich
+ * Changed: 5 Feb 2020 GMT
+ * By: Yang Xu xuyang_ustb@163.com
+ */
+
+version "2019.0"
+
+############### -----------------------------------------added by Yang Xu
+
+
+###################################################
+###################################################
+##
+##  RULES
+##
+##
+getRandomMap = fileRandom("maps/NW/*.png")
+# getRandomMap = fileRandom("maps/wnd_bkg/*.jpg")
+#getRandomMap = fileRandom("maps/uspp_naip/uspp_naip_noWND_rgb/uspp_naip_noWND_rgb/*.tif")
+
+@StartRule
+Lot --> 
+	split(x){'1: FloorMap }
+# 	scatter(surface, 100, gaussian, center, '1) { WindTurbine }
+	scatter(scope, 10, uniform) { WindTurbine } 
+	#scatter(scope, 5, uniform) { SmallWindTurbine }
+	
+FloorMap -->
+	setupProjection(0,scope.zx,'1,'1) projectUV(0)
+	texture(getRandomMap)
+	
+###################################################
+##
+## WindTurbines
+##
+#getWND = fileRandom("models/*.glb")
+getWND = fileRandom("models/Wind_Turbine.glb")
+getSmallWND = fileRandom("models/small_wind_turbine.glb")
+#getWND = fileRandom("wind_turbine/Wind_Turbine.glb")
+# getWND = fileRandom("models/small_wind_turbine.glb")
+# getWND = fileRandom("wind_turbine/160337_3d-model.obj")
+
+@Hidden  
+attr WNDModel = ""
+@Hidden
+attr yxRatio = 0
+@Hidden
+attr zxRatio = 0
+@Hidden
+attr X = 0
+@Hidden 
+attr Z = 0
+@Hidden
+attr ModelMin = 0
+@Hidden
+attr ModelMax = 0
+@Hidden 
+attr LenMinModelFW = 73.564 
+@Hidden
+attr LenMaxModelFW = 79.213
+
+@Hidden 
+attr smallLenMinModelFW = 100 # 12.5 # 11
+@Hidden 
+attr smallLenMaxModelFW = 120 # 14 # 15
+
+
+@Hidden 
+attr BodyLarger = 1
+@Hidden
+attr OtherColor = 0
+@Hidden
+attr AllColor = 0
+
+white_color = listRandom("#FFFFF9;#FFFFEF;#FFFFFB;#F9F5E6;#F7F6F0;#EFEEE7;")
+#E6DFDF;#DBD1D4;#DDD3CA;#E6DFDF;#DFD4CE;
+#B2AAA8;#BAAEAA;#BDB7B4;
+all_color = listRandom("#696969;#808080;#A9A9A9;#C0C0C0;#D3D3D3;#DCDCDC;#F5F5F5;#FFFFFF;#FFFAFA;#FFE4E1;#FFF5EE;#FAF0E6;#FAEBD7;#FFEFD5;#FDF5E6;#FFFAF0;#FFF8DC;#FFFACD;#FFFDD0;#FFFFF0;#F5F5DC;#FFFFE0;#F0FFF0;#F5FFFA;#F8F8FF;#E6E6FA;#F0F8FF;#E0FFFF;#45525f;#677398;#8B864E;#556B2F;#CDCDB4;#8B7E66;#838B8B;#8B8B83;#8B8989;#8B8B7A;#6E8B3D;#EEAD0E;#EEB422;")
+# all_color = listRandom("#696969;#808080;#A9A9A9;#C0C0C0;#D3D3D3;#DCDCDC;#F5F5F5;#FFFFFF;#FFFAFA;#FFE4E1;#FFF5EE;#FAF0E6;#FAEBD7;#FFEFD5;#FDF5E6;#FFFAF0;#FFF8DC;#FFFACD;#FFFDD0;#FFFFF0;#F5F5DC;#FFFFE0;#F0FFF0;#F5FFFA;#F8F8FF;#E6E6FA;#F0F8FF;#E0FFFF;#45525f;#677398;#8B864E;#556B2F;#CDCDB4;#8B7E66;#838B8B;#8B8B83;#8B8989;#8B8B7A;#6E8B3D;#EEAD0E;#EEB422;#EEAD0E;#EEB422;") # last two are yellow
+
+
+# @Hidden
+#attr fw_bw = rand(1.3, 1.9)
+@Hidden
+attr fw_bw = rand(1.8, 2.0)
+@Hidden
+attr bwRatio = 0
+
+
+
+WindTurbine -->
+		set(WNDModel,getWND) 
+		set(ModelMin, LenMinModelFW)
+		set(ModelMax, LenMaxModelFW) 
+# 		set(BodyLarger, 1)
+# 		set(OtherColor, 1)
+# 		set(bwRatio, fw_bw)
+		PlaceWND
+
+SmallWindTurbine -->
+		set(WNDModel,getSmallWND) 
+		set(ModelMin, smallLenMinModelFW)
+		set(ModelMax, smallLenMaxModelFW) 
+# 		set(BodyLarger, 1)
+# 		set(OtherColor, 1)
+# 		set(bwRatio, fw_bw)
+		PlaceWND
+		
+		
+PlaceWND -->
+	i(WNDModel)
+	set(yxRatio, assetInfo(WNDModel, sy)/assetInfo(WNDModel, sx))
+	set(zxRatio, assetInfo(WNDModel, sz)/assetInfo(WNDModel, sx))
+	PlaneSizeRotation
+		
+PlaneSizeRotation -->
+	case zxRatio >= 1:# z >= x
+		case bwRatio==0:
+			set(Z, rand(ModelMin, ModelMax))
+			s(Z/zxRatio, yxRatio*Z/zxRatio, Z)
+			center(xz)
+			TextureRotate
+		else:
+			set(Z, rand(ModelMin, ModelMax))
+			s(Z/bwRatio, yxRatio*Z/bwRatio, Z)
+			center(xz)
+			TextureRotate
+	else: # zxRatio < 1: # z < x
+		case bwRatio==0:
+			set(X, rand(ModelMin, ModelMax))
+			s(X, yxRatio*X, X*zxRatio)
+			center(xz)
+			TextureRotate
+		else:
+			set(X, rand(ModelMin, ModelMax))
+			s(X, yxRatio*X, X*bwRatio)
+			center(xz)
+			TextureRotate
+		
+
+@Hidden
+attr clr0 = 0
+@Hidden
+attr clr1 = 0	
+
+TextureRotate --> 
+		color(white_color)
+		r(scopeCenter, 0, rand(0, 360), 0) 
+# 		r(scopeCenter, 0, 40%:rand(0.3, 0.9)*150  40%: -rand(0.3, 0.9)*150 else: 0, 0) 
+
+		
+	
+	
+	
