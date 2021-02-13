@@ -220,7 +220,7 @@ def load_rule_file(seed, rule_file_path):
 def take_rgb_images(dt, sd, start_axis, end_axis, mode = 'RGB', parent_folder='', camera_angle=90):
     print('start')
     start_time = time.time()
-    tag='wnd_sd{}'.format(sd) 
+    tag='NE_wnd_sd{}'.format(sd) 
     folder_name='{}/{}_all_images_step{}'.format(parent_folder, dt, STEP)  
     print(folder_name)
     if not os.path.exists(ce.toFSPath('images/{}'.format(folder_name))):
@@ -246,7 +246,7 @@ def take_gt_images(dt, sd, start_axis, end_axis, mode = 'GT', parent_folder='', 
     
     print('start')
     start_time = time.time()
-    tag='wnd_sd{}'.format(sd) 
+    tag='NE_wnd_sd{}'.format(sd) 
     folder_name='{}/{}_all_annos_step{}'.format(parent_folder, dt, STEP)  
     if not os.path.exists(ce.toFSPath('images/{}'.format(folder_name))):
         os.makedirs(ce.toFSPath('images/{}'.format(folder_name)))
@@ -283,7 +283,7 @@ if __name__ == '__main__':
     '''
     start_axis=(-304, -304)
     end_axis=(305, 305)
-    ite_num = 1 # 45
+    ite_num = 191 # 45
     
     
     '''rgb + gt'''
@@ -296,14 +296,21 @@ if __name__ == '__main__':
     
     ''' rgb'''
     rule_files = rgb_rule_file
-    seed = 0
+    seed = 3
     random.seed(seed)
     
     for dt in display_type:
         for sd in range(ite_num):
             print(sd)
-            print(rule_files[display_type.index(dt)])
-            load_rule_file(sd, rule_files[display_type.index(dt)])
+            #print(rule_files[display_type.index(dt)])
+            #print(display_type.index(dt))
+            #load_rule_file(sd, rule_files[display_type.index(dt)])
+            random_rule = 'rules/yx_wind_turbine_color-bh_edited_bin{}.cga'.format(random.randint(0,19))
+            print(random_rule)
+            load_rule_file(sd, random_rule)
+            #rule = 'rules/yx_wind_turbine_labeling_color-bh_edited.cga'
+            #print(rule)
+            #load_rule_file(sd, rule)
             parent_folder = 'synthetic_wind_turbine_images'
             print(parent_folder)
             # rgb
@@ -311,17 +318,22 @@ if __name__ == '__main__':
  
     print("DONE!")
     
-    ''' gt'''
-    rule_files = gt_rule_file
-    seed = 0
-    random.seed(seed)
-    for dt in display_type:
-        for sd in range(ite_num):
-            print(sd)
-            print(rule_files[display_type.index(dt)])
-            load_rule_file(sd, rule_files[display_type.index(dt)])
-            parent_folder = 'synthetic_wind_turbine_images'
-            print(parent_folder)
-            #gt      
-            take_gt_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
-             
+#===============================================================================
+#    ''' gt'''
+#    rule_files = gt_rule_file
+#    seed = 3
+#    random.seed(seed)
+#    for dt in display_type:
+#        for sd in range(ite_num):
+#            #print(sd)
+#            #print(rule_files[display_type.index(dt)])
+#            #load_rule_file(sd, rule_files[display_type.index(dt)])
+#            random_rule = 'rules/yx_wind_turbine_labeling_color-bh_edited_bin{}.cga'.format(random.randint(0,19))
+#            print(random_rule)
+#            load_rule_file(sd, random_rule)
+#            parent_folder = 'synthetic_wind_turbine_images'
+#            print(parent_folder)
+#            #gt      
+#            take_gt_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
+#             
+#===============================================================================
