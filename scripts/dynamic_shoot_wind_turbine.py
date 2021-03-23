@@ -19,7 +19,7 @@ Resolution = 1
 #TileSize=8824
 STEP = Resolution * TileSize
 
-def dynamic_attributes(adjust_list, camera_angle, light_angle, light_intensity, dynamic_range, mode):
+def dynamic_attributes(adjust_list, camera_angle, light_angle, light_intensity, ambient_intensity, shadow_attenuation, dynamic_range, mode):
     '''
     adjust_list: a list of strings
     camera_angle: number between 0~90
@@ -40,10 +40,15 @@ def dynamic_attributes(adjust_list, camera_angle, light_angle, light_intensity, 
     if 'li' in adjust_list:
         light_intensity = min(1, light_intensity + 0.1 * random.randint(-int(10*dynamic_range['li']), int(10*dynamic_range['li'])))
         lightSettings.setSolarIntensity(light_intensity)
+    if 'ai' in adjust_list:
+        ambient_intensity = max(0, min(1, ambient_intensity + 0.1 * random.randint(-int(10*dynamic_range['ai']), int(10*dynamic_range['ai']))))
+        lightSettings.setAmbientIntensity(ambient_intensity)
+    if 'sa' in adjust_list:
+        shadow_attenuation = max(0, min(1, shadow_attenuation + 0.1 * random.randint(-int(10*dynamic_range['sa']), int(10*dynamic_range['sa']))))
+        lightSettings.setShadowAttenuation(shadow_attenuation)
+    
     if mode == 'GT':
         return camera_angle
-    lightSettings.setAmbientIntensity(1.0)
-    lightSettings.setShadowAttenuation(0.4)        
     ce.setLighting(lightSettings)
     print("New attribute triple bracket is ", (light_angle, camera_angle, light_intensity))
     return camera_angle
@@ -160,27 +165,26 @@ def exportGroundtruths2(directory, v, Tag=""):
 #                                     camera_angle=90, height='651.7',mode='RGB',
 #                                     folder_name='test')
 def loop_capturer_dynamic_attributes(start_axis, end_axis, tag,
-                                     adjust_list = ['la', 'ca', 'li'],
+                                     adjust_list = ['la', 'ca', 'li', 'ai', 'sa'],
                                      light_angle=60,  camera_angle=90, light_intensity=1,
-                                     dynamic_range={'ca': 0.0, 'la': 0, 'li': 0.0},
+                                     ambient_intensity=1.0, shadow_attenuation=0.4,
+                                     dynamic_range={'ca': 0, 'la': 0, 'li': 0.0, 'ai':0.0, 'sa':0.0},
                                      mode='RGB', folder_name='test'):
     counter = 0
     print('Start Shooting!')
     camfile = ce.toFSPath("data/camera.fbx") 
     height = setCamHeight(tile_width=TileSize)
     height = 2500
-    #height = 2400.0
-    print("height: {}".format(height))
-    angle = dynamic_attributes(adjust_list, camera_angle, light_angle, light_intensity, dynamic_range, mode)
+    angle = dynamic_attributes(adjust_list, camera_angle, light_angle, light_intensity, ambient_intensity, shadow_attenuation, dynamic_range, mode)
     print("angle: {}".format(angle))
-    print(start_axis[0], end_axis[0], STEP)
     
     for i in drange(start_axis[0], end_axis[0], STEP): # x
+        
         for j in drange(start_axis[1], end_axis[1], STEP): # z
             view = importFbxCamera(camfile, (i, j), angle, height)
-            print('i, j ', i, j)
+            print('i, j:', i, j)
             counter += 1
-            print(counter)
+            print('Counter:', counter)
             time.sleep(0.1) #time.sleep(0.02)
             
             if mode == 'RGB':
@@ -231,7 +235,7 @@ def take_rgb_images(dt, sd, start_axis, end_axis, mode = 'RGB', parent_folder=''
 #        shutil.rmtree(ce.toFSPath('images/{}'.format(folder_name)))
     '''# ORGINAL'''
     light_angle= 50
-    camera_angle= 90
+    camera_angle=90
     light_intensity= 0.8
     loop_capturer_dynamic_attributes(start_axis=start_axis, end_axis=end_axis,
                                  tag=tag, mode=mode, folder_name=folder_name,
@@ -265,14 +269,16 @@ if __name__ == '__main__':
     '''
     shoot each location with a combination of randomized parameters in a range
     eg:
-    adjust_list = ['la', 'ca', 'li'], # list of parameters to be randomized
-    light_angle=45,  camera_angle=80, light_intensity=0.8,  # centers of the range
-    dynamic_range={'ca': 10, 'la': 15, 'li': 0.3} # the width of the range
+    adjust_list = ['la', 'ca', 'li', 'ai', 'sa'], # list of parameters to be randomized
+    light_angle=45,  camera_angle=80, light_intensity=0.8, ambient_intensity=1.0, shadow_attenuation=0.4  # centers of the range
+    dynamic_range={'ca': 10, 'la': 15, 'li': 0.3, 'ai':0.0, 'sa':0.0} # the width of the range
 
     This set of parameters means shoot an image
      where camera angle is a random number in [70, 90],
      light angle is a random number in [30, 60],
      light intensity is a random number in [0.5, 1]
+     ambient intensity is a constant value 1.0 (since the dynamic range is 0.0, it won't vary)
+     shadow attenuation is a constant value 0.4
 
     '''
     
@@ -283,9 +289,10 @@ if __name__ == '__main__':
     start_axis=(80 + STEP//2, 48 + STEP//2)
     end_axis=(640 - STEP//2, 608 - STEP//2)
     '''
+
     start_axis=(-304, -304)
     end_axis=(305, 305)
-    ite_num = 191 # 45
+    ite_num = 1 # 45
     
     
     '''rgb + gt'''
