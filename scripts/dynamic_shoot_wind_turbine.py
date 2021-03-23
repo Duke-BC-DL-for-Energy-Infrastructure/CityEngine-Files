@@ -42,6 +42,8 @@ def dynamic_attributes(adjust_list, camera_angle, light_angle, light_intensity, 
         lightSettings.setSolarIntensity(light_intensity)
     if mode == 'GT':
         return camera_angle
+    lightSettings.setAmbientIntensity(1.0)
+    lightSettings.setShadowAttenuation(0.4)        
     ce.setLighting(lightSettings)
     print("New attribute triple bracket is ", (light_angle, camera_angle, light_intensity))
     return camera_angle
