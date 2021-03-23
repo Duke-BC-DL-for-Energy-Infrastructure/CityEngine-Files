@@ -19,32 +19,66 @@ Resolution = 1
 #TileSize=8824
 STEP = Resolution * TileSize
 
-def dynamic_attributes(adjust_list, camera_angle, light_angle, light_intensity, dynamic_range, mode):
+def dynamic_attributes(adjust_list, params, dynamic_range, mode):
     '''
     adjust_list: a list of strings
-    camera_angle: number between 0~90
-    light_angle: number between 0~90
-    light_instensity: number between 0~1
+    params: a dictionary has the form
+        {camera_elevation_angle: number between 0~90,
+        camera_azimuth_angle: number between 0~360,
+        light_elevation_angle: number between 0~90,
+        light_azimuth_angle: number between 0~360,
+        light_instensity: number between 0~1,
+        ambient_intensity: number between 0~1,
+        shadow_attenuation: number between 0~1,}
     dynamic_range: a dictionary has the form
-        {'ca': int, 'la': int, 'li': int}
+        {'ce': int, 'ca': int, 'la': int, 'li': int, 'ai': int, 'sa': int}
         The value  will vary in range of [sv-dv, sv+dv]
     '''
+    camera_elevation_angle = params['ce']
+    camera_azimuth_angle = params['ca']
+    light_elevation_angle = params['le']
+    light_azimuth_angle = params['la']
+    light_intensity = params['li']
+    ambient_intensity = params['ai']
+    shadow_attenuation = params['sa']
     lightSettings = ce.getLighting()
-    assert ('la' in adjust_list) or ('ca' in adjust_list) or ('li' in adjust_list), "Please select an attribute to augment"
-    if 'la' in adjust_list:
-        light_angle = light_angle + random.randint(-dynamic_range['la'], dynamic_range['la'])
-        lightSettings.setSolarElevationAngle(light_angle)
+
+    assert ('ce' in adjust_list) or ('ca' in adjust_list) or ('la' in adjust_list) or ('la' in adjust_list) \
+        or ('li' in adjust_list) or ('ai' in adjust_list) or ('sa' in adjust_list), "Please select an attribute to augment"
+
+    # calculate angles
+    if 'ce' in adjust_list:
+        camera_elevation_angle = camera_elevation_angle + random.randint(-dynamic_range['ce'], dynamic_range['ce'])
+        camera_elevation_angle = '-' + str(camera_elevation_angle)
     if 'ca' in adjust_list:
-        camera_angle = camera_angle + random.randint(-dynamic_range['ca'], dynamic_range['ca'])
-        camera_angle = '-' + str(camera_angle)
+        camera_azimuth_angle = camera_azimuth_angle + random.randint(-dynamic_range['ca'], dynamic_range['ca'])
+        camera_azimuth_angle = '-' + str(camera_azimuth_angle)
+    
+    # adjust lighting
+    if 'le' in adjust_list:
+        light_elevation_angle = light_elevation_angle + random.randint(-dynamic_range['le'], dynamic_range['le'])
+        lightSettings.setSolarElevationAngle(light_elevation_angle)
+    if 'la' in adjust_list:
+        light_azimuth_angle = light_azimuth_angle + random.randint(-dynamic_range['la'], dynamic_range['la'])
+        lightSettings.setSolarAzimuthAngle(light_azimuth_angle)
     if 'li' in adjust_list:
         light_intensity = min(1, light_intensity + 0.1 * random.randint(-int(10*dynamic_range['li']), int(10*dynamic_range['li'])))
         lightSettings.setSolarIntensity(light_intensity)
-    if mode == 'GT':
-        return camera_angle
+    if 'ai' in adjust_list:
+#        ambient_intensity = min(1, ambient_intensity + 0.1 * random.randint(-int(10*dynamic_range['ai']), int(10*dynamic_range['ai'])))
+        lightSettings.setAmbientIntensity(ambient_intensity)
+    if 'sa' in adjust_list:
+#        shadow_attenuation = min(1,  + 0.1 * random.randint(-int(10*dynamic_range['sa']), int(10*dynamic_range['sa'])))
+        lightSettings.setShadowAttenuation(shadow_attenuation)
+
     ce.setLighting(lightSettings)
-    print("New attribute triple bracket is ", (light_angle, camera_angle, light_intensity))
-    return camera_angle
+
+    if mode == 'GT':
+        return camera_elevation_angle
+
+    print("New parameters are: ", params)
+
+    return (camera_elevation_angle, camera_azimuth_angle)
 
 '''
 parse lines and look for id
@@ -86,6 +120,7 @@ def setCamPosV(v, vec):
     v.setCameraPosition(vec[0], vec[1], vec[2])
 
 def setCamRotV(v, vec):
+    print('camera rotations: {}'.format(vec))
     v.setCameraRotation(vec[0], vec[1], vec[2])
 
 '''
@@ -108,27 +143,53 @@ def setCamHeight(FOV=15, tile_width=608, resolution=0.3):
     used (FOV in degrees), desired tile size, and desired resolution
     '''
     FOV = math.radians(FOV)
-#    print('FOV', FOV)
     d = tile_width * resolution #pixel width of tile * resolution in m/pixel
     return str(d / (2*math.tan(FOV/2)))
 
+'''
+camera angle position offset helper functions
+'''
+def calculate_camera_pos_scale(elevation_angle):
+    elevation_angle_int = abs(int(elevation_angle))
+    max_elevation = 90.0
+    min_elevation = 60.0
+    scale_at_min_elevation = 0.70
+    return (elevation_angle_int-min_elevation) / (max_elevation-min_elevation) * 1.0 \
+        + (max_elevation-elevation_angle_int) / (max_elevation-min_elevation) * scale_at_min_elevation
+
+def adjust_camera_i(i, elevation_angle, height, scale):
+    elevation_angle_int = abs(int(elevation_angle))
+    # increased offset due to parallax
+    offset = 30
+    print(float(height)/math.tan(math.radians(elevation_angle_int)))
+    return int(scale * i) - int(float(height)/math.tan(math.radians(elevation_angle_int))) - offset
+
+def adjust_camera_j(j, scale):
+    return scale * j
 
 '''
 master function
 '''
-def importFbxCamera(fbxfile, axis, angle, height):
+def importFbxCamera(fbxfile, axis, angles, height):
+    elevation_angle, azimuth_angle = angles
+    scale = calculate_camera_pos_scale(elevation_angle)
+    new_i = adjust_camera_i(axis[0], elevation_angle, height, scale)
+    new_j = adjust_camera_j(axis[1], scale)
     data = parseFbxCam(fbxfile)
+
     if(data[0] and data[1]) :
-        data[0][0]=str(axis[0])
-        data[0][1] = height #200 #  height
-        data[0][2]= str(axis[1])
-        data[1][0] = data[1][1] = angle
+        data[0][0] = str(new_i)
+        data[0][1] = height
+        data[0][2] = str(new_j)
+        data[1][0] = elevation_angle
+        data[1][1] = azimuth_angle
+        print(data)
         v = setCamData(data)
 #        print(dir(v))
 #        print "Camera set to "+str(data)
         return v
     else:
-        print "No camera data found in file "+file
+        print("No camera data found in file "+str(fbxfile))
 
 '''
 ###############-----------------------------> need to change
@@ -158,24 +219,25 @@ def exportGroundtruths2(directory, v, Tag=""):
 #                                     camera_angle=90, height='651.7',mode='RGB',
 #                                     folder_name='test')
 def loop_capturer_dynamic_attributes(start_axis, end_axis, tag,
-                                     adjust_list = ['la', 'ca', 'li'],
-                                     light_angle=60,  camera_angle=90, light_intensity=1,
-                                     dynamic_range={'ca': 0.0, 'la': 0, 'li': 0.0},
+                                     adjust_list = ['ce', 'ca', 'la', 'li', 'ai', 'sa'],
+                                     params={'ce': 75, 'ca': 90, 'le': 50, 'la': 90, 'li': 1.0,'ai': 1.0, 'sa': 0.4},
+                                     dynamic_range={'ce':15, 'ca': 0.0, 'le': 0, 'la': 270, 'li': 0.0, 'ai': 0.0, 'sa': 0.0},
                                      mode='RGB', folder_name='test'):
+
     counter = 0
     print('Start Shooting!')
     camfile = ce.toFSPath("data/camera.fbx") 
     height = setCamHeight(tile_width=TileSize)
     height = 2500
-    #height = 2400.0
     print("height: {}".format(height))
-    angle = dynamic_attributes(adjust_list, camera_angle, light_angle, light_intensity, dynamic_range, mode)
-    print("angle: {}".format(angle))
+    camera_angles = dynamic_attributes(adjust_list, params, dynamic_range, mode)
+    print("angle: {}".format(camera_angles))
     print(start_axis[0], end_axis[0], STEP)
     
     for i in drange(start_axis[0], end_axis[0], STEP): # x
         for j in drange(start_axis[1], end_axis[1], STEP): # z
-            view = importFbxCamera(camfile, (i, j), angle, height)
+
+            view = importFbxCamera(camfile, (i, j), camera_angles, height)
             print('i, j ', i, j)
             counter += 1
             print(counter)
@@ -228,14 +290,8 @@ def take_rgb_images(dt, sd, start_axis, end_axis, mode = 'RGB', parent_folder=''
     
 #        shutil.rmtree(ce.toFSPath('images/{}'.format(folder_name)))
     '''# ORGINAL'''
-    light_angle= 50
-    camera_angle= 90
-    light_intensity= 0.8
     loop_capturer_dynamic_attributes(start_axis=start_axis, end_axis=end_axis,
-                                 tag=tag, mode=mode, folder_name=folder_name,
-                                 light_angle=light_angle, 
-                                 camera_angle=camera_angle,
-                                 light_intensity=light_intensity)
+                                 tag=tag, mode=mode, folder_name=folder_name,)
     print('Duration: {}'.format(time.time()-start_time)) 
     
 '''
@@ -254,9 +310,8 @@ def take_gt_images(dt, sd, start_axis, end_axis, mode = 'GT', parent_folder='', 
 #        shutil.rmtree(ce.toFSPath('images/{}'.format(folder_name)))
 #    print('removed')
     '''# ORGINAL'''
-    camera_angle= 90
     loop_capturer_dynamic_attributes(start_axis=start_axis, end_axis=end_axis,
-                                 tag=tag, mode=mode, folder_name=folder_name, camera_angle=camera_angle)
+                                 tag=tag, mode=mode, folder_name=folder_name)
     print('Duration: {}'.format(time.time()-start_time)) 
     
 if __name__ == '__main__':
@@ -283,7 +338,7 @@ if __name__ == '__main__':
     '''
     start_axis=(-304, -304)
     end_axis=(305, 305)
-    ite_num = 191 # 45
+    ite_num = 1 # 45
     
     
     '''rgb + gt'''
