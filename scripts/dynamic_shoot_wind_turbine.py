@@ -23,17 +23,19 @@ def dynamic_attributes(adjust_list, params, dynamic_range, mode):
     '''
     adjust_list: a list of strings
     params: a dictionary has the form
-        {camera_elevation_angle: number between 0~90,
-        camera_azimuth_angle: number between 0~360,
-        light_elevation_angle: number between 0~90,
-        light_azimuth_angle: number between 0~360,
-        light_instensity: number between 0~1,
-        ambient_intensity: number between 0~1,
-        shadow_attenuation: number between 0~1,}
+        {'p90deg', prob_camera_90_deg: float between 0~1,
+        'ce', camera_elevation_angle: number between 0~90,
+        'ca', camera_azimuth_angle: number between 0~360,
+        'le', light_elevation_angle: number between 0~90,
+        'la', light_azimuth_angle: number between 0~360,
+        'li', light_instensity: float between 0~1,
+        'ai', ambient_intensity: float between 0~1,
+        'sa', shadow_attenuation: float between 0~1,}
     dynamic_range: a dictionary has the form
         {'ce': int, 'ca': int, 'la': int, 'li': int, 'ai': int, 'sa': int}
         The value  will vary in range of [sv-dv, sv+dv]
     '''
+    prob_camera_90_deg = params['p90deg']
     camera_elevation_angle = params['ce']
     camera_azimuth_angle = params['ca']
     light_elevation_angle = params['le']
@@ -46,13 +48,17 @@ def dynamic_attributes(adjust_list, params, dynamic_range, mode):
     assert ('ce' in adjust_list) or ('ca' in adjust_list) or ('la' in adjust_list) or ('la' in adjust_list) \
         or ('li' in adjust_list) or ('ai' in adjust_list) or ('sa' in adjust_list), "Please select an attribute to augment"
 
-    # calculate angles
-    if 'ce' in adjust_list:
-        camera_elevation_angle = camera_elevation_angle + random.randint(-dynamic_range['ce'], dynamic_range['ce'])
-        camera_elevation_angle = '-' + str(camera_elevation_angle)
-    if 'ca' in adjust_list:
-        camera_azimuth_angle = camera_azimuth_angle + random.randint(-dynamic_range['ca'], dynamic_range['ca'])
-        camera_azimuth_angle = '-' + str(camera_azimuth_angle)
+    # calculate camera angles
+    if random.uniform(0, 1) < prob_camera_90_deg:
+        camera_elevation_angle = '-90'
+        camera_azimuth_angle = '-90'
+    else:
+        if 'ce' in adjust_list:
+            camera_elevation_angle = camera_elevation_angle + random.randint(-dynamic_range['ce'], dynamic_range['ce'])
+            camera_elevation_angle = '-' + str(camera_elevation_angle)
+        if 'ca' in adjust_list:
+            camera_azimuth_angle = camera_azimuth_angle + random.randint(-dynamic_range['ca'], dynamic_range['ca'])
+            camera_azimuth_angle = '-' + str(camera_azimuth_angle)
     
     # adjust lighting
     if 'le' in adjust_list:
@@ -117,9 +123,12 @@ def parseFbxCam(filename):
 helper functions
 '''
 def setCamPosV(v, vec):
+    print('camera positions: {}'.format(vec))
     v.setCameraPosition(vec[0], vec[1], vec[2])
 
 def setCamRotV(v, vec):
+#    vec[1] = '-30'
+#    vec[2] = '0'
     print('camera rotations: {}'.format(vec))
     v.setCameraRotation(vec[0], vec[1], vec[2])
 
@@ -160,8 +169,13 @@ def calculate_camera_pos_scale(elevation_angle):
 def adjust_camera_i(i, elevation_angle, height, scale):
     elevation_angle_int = abs(int(elevation_angle))
     # increased offset due to parallax
-    offset = 30
-    print(float(height)/math.tan(math.radians(elevation_angle_int)))
+    max_elevation = 90.0
+    min_elevation = 60.0
+    offset_at_min_elevation = 30.0
+    offset = int((elevation_angle_int-min_elevation) / (max_elevation-min_elevation) * 0 \
+        + (max_elevation-elevation_angle_int) / (max_elevation-min_elevation) * offset_at_min_elevation)
+
+    
     return int(scale * i) - int(float(height)/math.tan(math.radians(elevation_angle_int))) - offset
 
 def adjust_camera_j(j, scale):
@@ -220,14 +234,14 @@ def exportGroundtruths2(directory, v, Tag=""):
 #                                     folder_name='test')
 def loop_capturer_dynamic_attributes(start_axis, end_axis, tag,
                                      adjust_list = ['ce', 'ca', 'la', 'li', 'ai', 'sa'],
-                                     params={'ce': 75, 'ca': 90, 'le': 50, 'la': 90, 'li': 1.0,'ai': 1.0, 'sa': 0.4},
+                                     params={'p90deg': 0.5, 'ce': 75, 'ca': 90, 'le': 50, 'la': 90, 'li': 1.0,'ai': 1.0, 'sa': 0.4},
                                      dynamic_range={'ce':15, 'ca': 0.0, 'le': 0, 'la': 270, 'li': 0.0, 'ai': 0.0, 'sa': 0.0},
                                      mode='RGB', folder_name='test'):
 
     counter = 0
     print('Start Shooting!')
     camfile = ce.toFSPath("data/camera.fbx") 
-    height = setCamHeight(tile_width=TileSize)
+#    height = setCamHeight(tile_width=TileSize)
     height = 2500
     print("height: {}".format(height))
     camera_angles = dynamic_attributes(adjust_list, params, dynamic_range, mode)
