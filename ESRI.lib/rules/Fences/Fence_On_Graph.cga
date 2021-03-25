@@ -1,0 +1,1948 @@
+/**
+ * File:    Fence_On_Graph.cga
+ * Created: 18 Nov 2015 17:11:40 GMT
+ * Author:  Esri R&D Center Zurich
+ */
+
+version "2019.1"
+
+
+/*
+
+Input shape:  street shape (shape with UVs), street width >= base_depth
+
+Fences are created along the u direction of the street shape.
+
+Notes on Occlusion:
+
+* Occlusion Labels:  The fence parts (post, middle, base post, base middle, upper post, upper middle)
+  are each labeled with the given occlusionLabel.  These labeled parts are meant to be occluders which
+  can be found when testing to see if a query object touches() or overlaps() a fence part.
+  
+* Occlusion Testing:  No occlusion queries are performed in fence_on_graph.cga.
+  
+*/
+
+
+// ------------------------------
+// Attributes
+// ------------------------------
+
+@Group("Utilities", 0)
+
+@Order(1)
+@Description("label to give fence parts as occluders for occlusion testing")
+attr occlusionLabel = ""
+
+
+// ------------------------------
+
+// fence base
+@Group("Fence Base", 1)
+
+@Order(1)
+@Description("fence has base")
+attr hasBase = true
+
+@Order(2)
+@File("obj", "dae", "fbx")
+@Description("replace base post with asset")
+attr basePost_asset = ""
+
+@Order(3)
+@File("obj", "dae", "fbx")
+@Description("replace base middle with asset")
+attr baseMiddle_asset = ""
+
+@Order(4)
+@Distance
+@Description("base height")
+attr base_height = case hasBase: 0.1 else: 0
+
+@Order(5)
+@Distance
+@Description("base depth (should be less than street width)")
+attr base_depth = post_width
+		
+// ------------------------------
+
+// main part of fence
+
+// Fence Main - Post
+@Group("Fence Main", "Post", 2)
+
+@Order(1)
+@Description("fence has posts")
+attr hasPosts = true
+
+@Order(2)
+@File("obj", "dae", "fbx")
+@Description("replace post with asset")
+attr post_asset = ""
+
+@Order(3)
+@Description("post shape")
+@Enum("cube", "cylinder")
+attr post_shape = "cube"
+
+@Order(4)
+@Handle(shape=Handle_MainPost, axis=x, repeat=none, slip=inside, reference=center, occlusion=false)
+@Distance
+@Description("post width (and depth)")
+attr post_width = 0.2
+
+@Order(5)
+@Handle(shape=Handle_MainPost, axis=y, repeat=none, slip=inside, reference=center, occlusion=false)
+@Distance
+@Description("post height")
+attr post_height = 1.2
+
+@Order(6)
+@File("obj", "dae", "fbx")
+@Description("replace post top with asset")
+attr postTop_asset = ""
+
+@Order(7)
+@Description("top part of post (may need height to be non-zero)")
+@Enum("match terrain angle", "flat", "pyramid", "raised pyramid", "sphere", "large flat cap", "large pyramid")
+attr postTop = "match terrain angle"
+
+@Order(8)
+@Distance
+@Description("height of top part of post")
+attr postTop_height = 
+	case postTop_asset!="": 0.1
+	case postTop=="match terrain angle": 0
+	case postTop=="sphere": post_width
+	else: 0.1
+
+// ------------------------------
+
+// Fence Main - Middle
+@Group("Fence Main", "Middle", 3)
+
+@Order(1)
+@File("obj", "dae", "fbx")
+@Description("replace middle with asset")
+attr middle_asset = ""
+
+@Order(2)
+@Enum("none", "cube", "plane")
+@Description("shape of middle wall")
+attr middle_shape = "none"
+
+@Order(3)
+@Description("middle is glass")
+attr middleIsGlass = false
+
+@Order(4)
+@Handle(shape=Handle_MainMiddle, axis=x, repeat=none, slip=inside, reference=center, occlusion=false)
+@Distance
+@Description("approximate width of middle part of fence between posts")
+attr middle_width = 2.5
+
+@Order(5)
+@Distance
+@Description("depth of middle part of fence between posts")
+attr middle_depth = vertBar_depth + horizBar_depth
+
+@Order(6)
+@Distance
+@Description("height above base at which middle part starts")
+attr middleStart_height = 0.04
+
+@Order(7)
+@Distance
+@Description("height difference between posts and middle part")
+attr postMiddleDiff_height = 0.04
+
+// ------------------------------
+
+// Fence Main - Horizontal Bars
+@Group("Fence Main", "Horizontal Bars", 4)
+
+@Order(1)
+@Description("fence has horizontal bars")
+attr hasHorizBars = true
+
+@Order(2)
+@File("obj", "dae", "fbx")
+@Description("replace horizontal bar with asset")
+attr horizBar_asset = ""
+
+@Order(3)
+@Description("horizontal bar shape")
+@Enum("cube", "cylinder")
+attr horizBar_shape = "cube"
+
+@Order(4)
+@Description("postions of horizontal bars (start of middle part to bottom of bar), format x;x;x")
+attr horizBarPositions = ""
+
+@Order(5)
+@Distance
+@Description("height of single horizontal bar")
+attr horizBar_height = 0.11
+
+@Order(6)
+@Distance
+@Description("spacing between horizontal bars (invalid if horizBarPositions has values)")
+attr horizBar_spacing = 0.72
+
+@Order(7)
+@Distance
+@Description("height above middle part at which horizontal bars start (invalid if horizBarPositions has values)")
+attr horizBarStart_height = 0.09
+
+@Order(8)
+@Distance
+@Description("horizontal bar depth")
+attr horizBar_depth = 0.03
+
+@Order(9)
+@Distance
+@Description("offset depth from back of middle part for horizontal bars")
+attr horizBar_offset_depth = -0.5*horizBar_depth
+
+// ------------------------------
+
+// Fence Main - Vertical Bars
+@Group("Fence Main", "Vertical Bars", 5)
+
+@Order(1)
+@Description("fence has vertical bars")
+attr hasVertBars = true
+
+@Order(2)
+@File("obj", "dae", "fbx")
+@Description("replace vertical bar with asset")
+attr vertBar_asset = ""
+
+@Order(3)
+@Description("vertical bar shape")
+@Enum("cube", "cylinder")
+attr vertBar_shape = "cube"
+
+@Order(4)
+@Description("approximate postions of vertical bars (start of middle part to left side of bar), format x;x;x")
+attr vertBarPositions = ""
+
+@Order(5)
+@Distance
+@Description("width of single vertical bar")
+attr vertBar_width = 0.07
+
+@Order(6)
+@Distance
+@Description("spacing between vertical bars")
+attr vertBar_spacing = 0.07
+
+@Order(7)
+@Distance
+@Description("vertical bar depth")
+attr vertBar_depth = 0.03
+
+@Order(8)
+@Distance
+@Description("offset depth from back of middle part for vertical bars")
+attr vertBar_offset_depth = 0.5*vertBar_depth
+
+@Order(9)
+@File("obj", "dae", "fbx")
+@Description("replace top of vertical bar with asset")
+attr vertBarTop_asset = ""
+
+@Order(10)
+@Description("top of vertical bars (may need height to be non-zero)")
+@Enum("match terrain angle", "flat", "pointy", "cone")
+attr vertBarTop = "flat"
+
+@Order(11)
+@Distance
+@Description("height of vertical bar tops")
+attr vertBarTop_height =
+	case vertBarTop_asset!="": 0.04
+	case vertBarTop=="pointy" || vertBarTop=="cone": vertBar_width
+	else: 0
+
+@Order(12)
+@Description("type of curve for top of fence")
+@Enum("straight", "concave", "convex", "v shaped", "triangle")
+attr curveType = "straight"
+
+@Order(13)
+@Distance
+@Description("height difference along top of fence due to curve")
+attr curveHeightDiff = 0.18
+
+// ------------------------------
+
+// upper part of fence
+@Group("Fence Upper", 6)
+
+@Order(1)
+@Description("fence has upper part")
+attr hasUpper = true
+
+@Order(2)
+@Description("upper middle part is glass")
+attr upperMiddleIsGlass = false
+
+@Order(3)
+@Range(min=-20, max=20, restricted=false) @Angle
+@Description("angle of upper part from vertical")
+attr upper_angle = 0
+
+@Order(4)
+@File("obj", "dae", "fbx")
+@Description("replace upper post with asset")
+attr upperPost_asset = ""
+
+@Order(5)
+@Enum("cube", "cylinder")
+@Description("shape of upper post")
+attr upperPost_shape = "cube"
+
+@Order(6)
+@Distance
+@Description("height of upper post")
+attr upperPost_height = 0.1
+
+@Order(7)
+@Distance
+@Description("depth of upper post")
+attr upperPost_depth = post_width
+
+@Order(8)
+@File("obj", "dae", "fbx")
+@Description("replace upper post top with asset")
+attr upperPostTop_asset = ""
+
+@Order(9)
+@Enum("match terrain angle", "flat", "pyramid", "raised pyramid", "sphere", "large flat cap", "large pyramid")
+@Description("top part of upper post (may need height to be non-zero)")
+attr upperPostTop = "match terrain angle"
+
+@Order(10)
+@Distance
+@Description("height of top part of upper post")
+attr upperPostTop_height =
+	case upperPostTop_asset!="": 0.1
+	case upperPostTop=="match terrain angle": 0
+	case upperPostTop=="sphere": post_width
+	else: 0.1
+
+@Order(11)
+@File("obj", "dae", "fbx")
+@Description("replace upper middle with asset")
+attr upperMiddle_asset = ""
+
+@Order(12)
+@Enum("none", "cube", "barbed wire")
+@Description("shape of middle wall of upper part")
+attr upperMiddle_shape = "cube"
+
+@Order(13)
+@Distance
+@Description("height of upper middle part")
+attr upperMiddle_height = 0.1
+
+@Order(14)
+@Distance
+@Description("depth of upper middle part")
+attr upperMiddle_depth = upperPost_depth
+
+
+// ------------------------------
+
+@Group("Colors and Textures", "Base Post", 7)
+
+@Order(1)
+@Color
+@Description("base post color")
+attr basePost_color = "#FFFFFF"
+
+@Order(2)
+@File("bmp", "gif", "jpg", "jpeg", "png", "tif", "tiff")
+@Description("base post texture")
+attr basePost_tex = ""
+
+@Order(3)
+@Distance
+@Description("texture width")
+attr basePost_tex_width = 0
+
+@Order(4)
+@Description("rotate texture 90 deg")
+attr basePost_tex_rot90 = false
+
+// ------------------------------
+
+@Group("Colors and Textures", "Base Middle", 8)
+
+@Order(1)
+@Color
+@Description("base post color")
+attr baseMiddle_color = "#FFFFFF"
+
+@Order(2)
+@File("bmp", "gif", "jpg", "jpeg", "png", "tif", "tiff")
+@Description("base post texture")
+attr baseMiddle_tex = ""
+
+@Order(3)
+@Distance
+@Description("texture width")
+attr baseMiddle_tex_width = 0
+
+@Order(4)
+@Description("rotate texture 90 deg")
+attr baseMiddle_tex_rot90 = false
+
+// ------------------------------
+
+@Group("Colors and Textures", "Main Post", 9)
+
+@Order(1)
+@Color
+@Description("main post color")
+attr post_color = "#FFFFFF"
+
+@Order(2)
+@Description("main post texture")
+@File("bmp", "gif", "jpg", "jpeg", "png", "tif", "tiff")
+attr post_tex = ""
+
+@Order(3)
+@Distance
+@Description("texture width")
+attr post_tex_width = 0
+
+@Order(4)
+@Description("rotate texture 90 deg")
+attr post_tex_rot90 = false
+
+// ------------------------------
+
+@Group("Colors and Textures", "Main Middle", 10)
+
+@Order(1)
+@Color
+@Description("color of solid middle section")
+attr middle_color = "#FFFFFF"
+
+@Order(2)
+@File("bmp", "gif", "jpg", "jpeg", "png", "tif", "tiff")
+@Description("texture on middle section")
+attr middle_tex = ""
+
+@Order(3)
+@Distance
+@Description("texture width")
+attr middle_tex_width = 0
+
+@Order(4)
+@Description("rotate texture 90 deg")
+attr middle_tex_rot90 = false
+
+// ------------------------------
+
+@Group("Colors and Textures", "Horizontal Bars", 11)
+
+@Order(1)
+@Description("rotate horizontal bar asset 90 deg")
+attr horizBar_asset_rot90 = false
+
+@Order(2)
+@Color
+@Description("horizontal bar color")
+attr horizBar_color = "#FFFFFF"
+
+@Order(3)
+@Description("horizontal bar texture")
+@File("bmp", "gif", "jpg", "jpeg", "png", "tif", "tiff")
+attr horizBar_tex = ""
+
+@Order(4)
+@Distance
+@Description("texture width")
+attr horizBar_tex_width = 0
+
+@Order(5)
+@Description("rotate texture 90 deg")
+attr horizBar_tex_rot90 = false
+
+// ------------------------------
+
+@Group("Colors and Textures", "Vertical Bars", 12)
+
+@Order(1)
+@Color
+@Description("vertical bar color")
+attr vertBar_color = "#FFFFFF"
+
+@Order(2)
+@Description("vertical bar texture")
+@File("bmp", "gif", "jpg", "jpeg", "png", "tif", "tiff")
+attr vertBar_tex = ""
+
+@Order(3)
+@Distance
+@Description("texture width")
+attr vertBar_tex_width = 0
+
+@Order(4)
+@Description("rotate texture 90 deg")
+attr vertBar_tex_rot90 = false
+
+// ------------------------------
+
+@Group("Colors and Textures", "Upper Post", 13)
+
+@Order(1)
+@Color
+@Description("color of upper post")
+attr upperPost_color = "#FFFFFF"
+
+@Order(2)
+@Description("texture of upper post")
+@File("bmp", "gif", "jpg", "jpeg", "png", "tif", "tiff")
+attr upperPost_tex = ""
+
+@Order(3)
+@Distance
+@Description("texture width")
+attr upperPost_tex_width = 0
+
+@Order(4)
+@Description("rotate texture 90 deg")
+attr upperPost_tex_rot90 = false
+
+// ------------------------------
+
+@Group("Colors and Textures", "Upper Middle", 14)
+
+@Order(1)
+@Color
+@Description("color of upper middle part")
+attr upperMiddle_color = "#FFFFFF"
+
+@Order(2)
+@File("bmp", "gif", "jpg", "jpeg", "png", "tif", "tiff")
+@Description("texture on upper middle part")
+attr upperMiddle_tex = ""
+
+@Order(3)
+@Distance
+@Description("texture width")
+attr upperMiddle_tex_width = 0
+
+@Order(4)
+@Description("rotate texture 90 deg")
+attr upperMiddle_tex_rot90 = false
+
+
+// ------------------------------
+
+// read from obj attributes (for streets only)
+@Hidden
+attr connectionEnd = ""
+@Hidden
+attr connectionStart = ""
+@Hidden
+attr shapeType = ""
+
+
+// ------------------------------
+// Other Variables and Functions
+// ------------------------------
+
+// fence dimensions
+const fence_height = base_height*createBase + main_height*createMain + upper_height*createUpper
+const fence_depth = max(max(base_depth*createBase, main_depth*createMain), upper_depth*createUpper)
+
+// other fence dimensions
+const post_depth = post_width
+const main_height = max(post_height, post_height-postMiddleDiff_height)
+const main_depth = max(post_depth*createPosts, middle_depth)
+const middle_height = post_height - middleStart_height - postMiddleDiff_height
+const upper_height = max(upperPost_height*createPosts, upperMiddle_height)
+const upper_depth = max(upperPost_depth*createPosts, upperMiddle_depth)
+
+// create parts?
+const createPosts = case hasPosts: 1 else: 0
+const createBase = case hasBase: 1 else: 0
+const createMain = case hasPosts || middle_shape!="none" || hasHorizBars || hasVertBars: 1 else: 0
+const createUpper = case hasUpper: 1 else: 0
+
+// create end post for segments at end of street
+const createEndPost =
+	case connectionEnd == "ROUNDABOUT"
+		 || connectionEnd == "DEAD_END"
+		 || connectionEnd == "JUNCTION_ENTRY"
+		 || connectionEnd == "JUNCTION" :
+		1*createPosts
+	else:
+		0
+
+// resolution of primitives
+const nSides_primitive = 8
+		
+// barbed wire dimensions and texture
+const barbedWire_dist = 0.1
+const barbedWire_height = 0.03
+const barbedWire_tex = "Fences/Textures/barbedWire_01.png"
+
+// texture sizing functions
+const pi = 3.14
+tex_width(myTex_width) = case myTex_width == 0: scope.sx else: myTex_width
+tex_height(myTex, myTex_width) =
+	case myTex_width==0:
+		imageInfo(myTex, sy)*scope.sx/imageInfo(myTex, sx)
+	else:
+		imageInfo(myTex, sy)*myTex_width/imageInfo(myTex, sx)
+tex_uFactor_cyl(myTex_width) = case myTex_width == 0: 1 else: pi*scope.sx/myTex_width
+tex_vFactor_cyl(myTex, myTex_width) =
+	case myTex_width==0:
+		scope.sy*imageInfo(myTex, sx)/(imageInfo(myTex, sy)*pi*scope.sx)
+	else:
+		scope.sy*imageInfo(myTex, sx)/(imageInfo(myTex, sy)*myTex_width)
+tex_uFactor_cyl2(myTex, myTex_width) =
+	case myTex_width==0:
+		pi*scope.sx*imageInfo(myTex, sx)/(imageInfo(myTex, sy)*scope.sy)
+	else:
+		pi*scope.sx*imageInfo(myTex, sx)/(imageInfo(myTex, sy)*myTex_width)
+tex_vFactor_cyl2(myTex_width) =  case myTex_width == 0: 1 else: scope.sy/myTex_width
+tex_uFactor_sphere(myTex_width) = case myTex_width == 0: 1 else: pi*scope.sx/myTex_width
+tex_vFactor_sphere(myTex, myTex_width) =
+	case myTex_width==0:
+		pi*scope.sy*imageInfo(myTex, sx)/(imageInfo(myTex, sy)*pi*scope.sx)
+	else:
+		pi*scope.sy*imageInfo(myTex, sx)/(imageInfo(myTex, sy)*myTex_width)
+		
+// bar positions
+const list_horizBarPositions =
+	case horizBarPositions == "":
+		""
+	else:
+		listTerminate(horizBarPositions)
+
+const list_vertBarPositions =
+	case vertBarPositions == "":
+		""
+	else:
+		listTerminate(vertBarPositions)
+		
+// list accessors
+const list_horizBarPositions_size = listSize(list_horizBarPositions)
+const list_vertBarPositions_size = listSize(list_vertBarPositions)
+list_horizBarPositions_getVal(ind) = float(listItem(list_horizBarPositions, ind))
+list_vertBarPositions_getVal(ind) = float(listItem(list_vertBarPositions, ind))
+
+// small thickness for fence line on streets
+const fenceLine_depth = 0.1
+
+// rotate middle footprint on street segments if above thres
+const movingThres = 0.01
+		
+// calc vector length
+vecLen(vx, vy, vz) =
+	sqrt(vx*vx + vy*vy + vz*vz)
+
+// dot product of a dot b
+dot(ax, ay, az, bx, by, bz) =
+	ax*bx + ay*by + az*bz
+	
+// get multiplier for moving scope test
+// returns 1 if scope moved in z (else returns -1)
+getMult_zChanged(ax, ay, az, bx, by, bz) =
+	case dot(ax, ay, az, bx, by, bz) > movingThres:			// scope changed in z
+		1
+	else:
+		-1
+
+// get multiplier for moving scope test
+// returns -1 if scope moved in y (else returns 1)
+getMult_yChanged(ax, ay, az, bx, by, bz) =
+	case dot(ax, ay, az, bx, by, bz) > movingThres:			// scope changed in y
+		-1
+	else:
+		1
+		
+// multiplier for creating curve along top of fence
+curveMult = abs((2*split.index)/(split.total-1) - 1)
+
+
+// ------------------------------
+// Start Rule
+// ------------------------------
+
+// fence on graph
+@StartRule
+Generate -->
+	set(base_height, case hasBase: base_height else: 0)
+	split(u, uvSpace, 0) { -geometry.uMin: NIL
+						 | ~1: Footprint
+						 | geometry.uMax-1: NIL }
+
+			
+// ------------------------------
+// Fence Footprints
+// ------------------------------
+
+// footprint under fence
+Footprint -->
+	case shapeType == "Junction":
+		JunctionFootprint
+	else:
+		BaseFootprint
+		MainAndUpperFootprint
+		
+// footprint for junction shape, generate only middle part of fence
+JunctionFootprint -->
+	set(post_width, 0)
+	BaseFootprint
+	MainAndUpperFootprint
+	
+// footprint under base
+BaseFootprint -->
+	case hasBase:
+		split(v, unitSpace, 0) { ~1: NIL
+							   | base_depth: split(u, unitSpace, 0) { { post_width*createPosts: alignScopeToGeometry(zUp, 0, 0)
+							   														  			alignScopeToAxes(y)
+							   														  			BasePostFootprint
+								 									   | ~middle_width: alignScopeToGeometry(zUp, 0, 0)
+								 									   					alignScopeToAxes(y)
+								 									   					BaseMiddleFootprint }*
+							   										 | post_width*createEndPost: alignScopeToGeometry(zUp, 0, 0)
+							   																	 alignScopeToAxes(y)
+							   																	 BasePostFootprint }
+							   | ~1: NIL }
+	else :
+		NIL
+							   						   
+// footprint under main and upper - single segments for posts and middle sections
+MainAndUpperFootprint -->
+	split(v, unitSpace, 0) { ~1: NIL
+						   | fenceLine_depth: split(u, unitSpace, 0) { { post_width*createPosts: alignScopeToGeometry(zUp, 0, 0)
+						   															   			 FixFootprint("post")
+							 											| ~middle_width: alignScopeToGeometry(zUp, 0, 0)
+							 															 FixFootprint("middle") }*
+						   											  | post_width*createEndPost: alignScopeToGeometry(zUp, 0, 0)
+						   											  							  FixFootprint("post") }
+						   | ~1: NIL }
+
+// footprint for post or middle part of fence
+// record scope	as previous scope
+// type		["post", "middle"] post or middle
+FixFootprint(type) -->
+	FixFootprint_CalcVecLength(type,
+							   atan(scope.sz/scope.sx),
+							   atan((scope.sy - fenceLine_depth)/scope.sx),
+							   scope.sx,
+							   scope.sy,
+							   scope.sz,
+							   convert(x, scope, world, pos, 0, 0, 0), 
+							   convert(y, scope, world, pos, 0, 0, 0),
+							   convert(z, scope, world, pos, 0, 0, 0),
+							   convert(x, scope, world, pos, 0, 0, 1) - convert(x, scope, world, pos, 0, 0, 0),
+							   convert(y, scope, world, pos, 0, 0, 1) - convert(y, scope, world, pos, 0, 0, 0),
+							   convert(z, scope, world, pos, 0, 0, 1) - convert(z, scope, world, pos, 0, 0, 0),
+							   convert(x, scope, world, pos, 0, 1, 0) - convert(x, scope, world, pos, 0, 0, 0),
+							   convert(y, scope, world, pos, 0, 1, 0) - convert(y, scope, world, pos, 0, 0, 0),
+							   convert(z, scope, world, pos, 0, 1, 0) - convert(z, scope, world, pos, 0, 0, 0))
+							   
+// calc length of z and y vectors
+// type											["post", "middle"] post or middle
+// theta_y										rotation angle (around y) for post or middle footprint
+// theta_z										rotation angle (around z) for post or middle footprint
+// prev_sx, prev_sy, prev_sz					previous scope's size
+// prevOrigin_x, prevOrigin_y, prevOrigin_z		previous scope's origin in world coords
+// zVec_x, zVec_y, zVec_z						previous scope's unnormalized z vector in world coords
+// yVec_x, yVec_y, yVec_y						previous scope's unnormalized y vector in world coords
+FixFootprint_CalcVecLength(type, theta_y, theta_z, prev_sx, prev_sy, prev_sz, prevOrigin_x, prevOrigin_y, prevOrigin_z, zVec_x, zVec_y, zVec_z, yVec_x, yVec_y, yVec_z) -->
+	FixFootprint_NormalizeVecs(type,
+							   theta_y,
+							   theta_z,
+							   prev_sx,
+							   prev_sy,
+							   prev_sz,
+							   prevOrigin_x, 
+							   prevOrigin_y,
+							   prevOrigin_z,
+							   zVec_x,
+							   zVec_y,
+							   zVec_z,
+							   vecLen(zVec_x, zVec_y, zVec_z),
+							   yVec_x,
+							   yVec_y,
+							   yVec_z,
+							   vecLen(yVec_x, yVec_y, yVec_z))
+
+	
+// normalize z and y vectors, get first face of footprint
+// type											["post", "middle"] post or middle
+// theta_y										rotation angle (around y) for post or middle footprint
+// theta_z										rotation angle (around z) for post or middle footprint
+// prev_sx, prev_sy, prev_sz					previous scope's size
+// prevOrigin_x, prevOrigin_y, prevOrigin_z		previous scope's origin in world coords
+// zVec_x, zVec_y, zVec_z						previous scope's unnormalized z vector in world coords
+// zVec_len										length of previous scope's z vector
+// yVec_x, yVec_y, yVec_y						previous scope's unnormalized y vector in world coords
+// yVec_len										length of previous scope's y vector
+FixFootprint_NormalizeVecs(type, theta_y, theta_z, prev_sx, prev_sy, prev_sz, prevOrigin_x, prevOrigin_y, prevOrigin_z, zVec_x, zVec_y, zVec_z, zVec_len, yVec_x, yVec_y, yVec_z, yVec_len) -->
+	comp(f) { 0: FixFootprint_FirstFace(type,
+							   			theta_y,
+							   			theta_z,
+							   			prev_sx,
+							  			prev_sy,
+							  			prev_sz,
+										prevOrigin_x,
+										prevOrigin_y,
+										prevOrigin_z,
+										zVec_x/zVec_len,
+										zVec_y/zVec_len,
+										zVec_z/zVec_len,
+										yVec_x/yVec_len,
+										yVec_y/yVec_len,
+										yVec_z/yVec_len) }
+		
+// first face of post or middle footprint, want to create single face
+// record scope as current scope
+// type											["post", "middle"] post or middle
+// theta_y										rotation angle (around y) for post or middle footprint
+// theta_z										rotation angle (around z) for post or middle footprint
+// prev_sx, prev_sy, prev_sz					previous scope's size
+// prevOrigin_x, prevOrigin_y, prevOrigin_z		previous scope's origin in world coords
+// zVec_x, zVec_y, zVec_z						previous scope's normalized z vector in world coords
+// yVec_x, yVec_y, yVec_y						previous scope's normalized y vector in world coords
+FixFootprint_FirstFace(type, theta_y, theta_z, prev_sx, prev_sy, prev_sz, prevOrigin_x, prevOrigin_y, prevOrigin_z, zVec_x, zVec_y, zVec_z, yVec_x, yVec_y, yVec_z) -->
+	FixFootprint_SingleFace(type,
+							getMult_zChanged(convert(x, scope, world, pos, 0, 0, 0) - prevOrigin_x,
+											 convert(y, scope, world, pos, 0, 0, 0) - prevOrigin_y,
+											 convert(z, scope, world, pos, 0, 0, 0) - prevOrigin_z,
+											 zVec_x,
+											 zVec_y,
+											 zVec_z),
+							theta_y,
+							getMult_yChanged(convert(x, scope, world, pos, 0, 0, 0) - prevOrigin_x,
+											 convert(y, scope, world, pos, 0, 0, 0) - prevOrigin_y,
+											 convert(z, scope, world, pos, 0, 0, 0) - prevOrigin_z,
+											 yVec_x,
+											 yVec_y,
+											 yVec_z),
+							theta_z,
+							prev_sx,
+							prev_sy,
+							prev_sz)
+	
+// create single face for post or middle footprint - rotate, scale, depends on whether scope moved or not
+// type											["post", "middle"] post or middle
+// mult1										multiplier for theta_y, 1 if scope changed in z after comp of first face
+// theta_y										rotation angle (around y) for post or middle footprint
+// mult2										multiplier for theta_z, -1 if scope changed in y after comp of first face
+// theta_z										rotation angle (around z) for post or middle footprint
+// prev_sx, prev_sy, prev_sz					previous scope's size
+FixFootprint_SingleFace(type, mult1, theta_y, mult2, theta_z, prev_sx, prev_sy, prev_sz) -->
+	set(trim.vertical, false)
+	t(0, 0.5*fenceLine_depth, 0)
+	s(vecLen(prev_sx, prev_sy-fenceLine_depth, prev_sz), '1, 1)
+	r(0, mult1*theta_y, mult2*theta_z)
+	t(0, -0.5*fenceLine_depth, 0)
+	primitiveCube()
+	comp(f) { back: reverseNormals()
+					FixFootprint_FixScope(type) }
+			
+// fix scope
+FixFootprint_FixScope(type) -->	
+	alignScopeToAxes(y)
+	rotateScope(0, 180, 0)
+	FixFootprint_Translate(type)
+			
+// post or middle footprint, single face that connects to its neighbor footprints
+// type		["post", "middle"] post or middle
+FixFootprint_Translate(type) -->
+	case hasUpper:
+		t(0, base_height, 0)
+		MainFootprint(type)
+		t(0, main_height, 0)
+		UpperFootprint(type)
+	else:
+		t(0, base_height, 0)
+		MainFootprint(type)
+		
+// footprint of main section's post or middle
+MainFootprint(type) -->
+	case type == "post":
+		s('1, '1, post_depth)
+		center(z)
+		MainPostFootprint
+	else:
+		s('1, '1, middle_depth)
+		center(z)
+		MainMiddleFootprint
+		
+// footprint of upper section's post or middle
+UpperFootprint(type) -->
+	case type == "post":
+		s('1, '1, upperPost_depth)
+		center(z)
+		UpperPostFootprint
+	else:
+		s('1, '1, upperMiddle_depth)
+		center(z)
+		UpperMiddleFootprint
+			  
+
+// -------------------------------------
+// Footprints of Key Fence Parts
+//
+// Note: Handle shapes get called here.  Ghost shapes created here.
+// Note: Fence_On_Polygon calls these rules.
+// -------------------------------------
+	
+// footprint of base of fence, post
+BasePostFootprint -->
+	case geometry.du(0, uvSpace)==0:
+		setupProjection(0, scope.zx, '1, '1)
+		projectUV(0)
+		rotateUV(0, -90)
+		BasePost
+		Ghost_BaseFootprint
+	else:
+		normalizeUV(0, uv, collectiveAllFaces)
+		BasePost
+		Ghost_BaseFootprint
+
+// footprint of base of fence, middle section
+BaseMiddleFootprint -->
+	case geometry.du(0, uvSpace)==0:
+		setupProjection(0, scope.zx, '1, '1)
+		projectUV(0)
+		rotateUV(0, -90)
+		BaseMiddle
+		Ghost_BaseFootprint
+	else:
+		normalizeUV(0, uv, collectiveAllFaces)
+		BaseMiddle
+		Ghost_BaseFootprint
+
+// footprint of main section's post
+MainPostFootprint -->
+	MainPost
+	extrude(world.up, post_height)
+	Handle_MainPost
+	Ghost_FencePart
+	
+// footprint of main section's middle part of fence between posts
+MainMiddleFootprint -->
+	t(0, middleStart_height, 0)
+	extrude(world.up, middle_height)
+	MainMiddle
+	Handle_MainMiddle
+	Ghost_FencePart
+	
+// footprint of upper section's post
+UpperPostFootprint -->
+	UpperPost
+	extrude(world.up, upperPost_height)
+	Ghost_UpperPost
+	
+// footprint of upper section's middle part of fence between posts
+UpperMiddleFootprint -->
+	extrude(world.up, upperMiddle_height)
+	UpperMiddle
+	Ghost_UpperMiddle
+	
+	
+// ------------------------------
+// Specialized Fence Parts
+// ------------------------------
+
+// base of fence, post	
+BasePost -->
+	case basePost_asset!="":
+		insertAlongUV(0, basePost_asset, base_height)
+	else:
+		extrude(world.up, base_height)
+		ColorAndTexture_Solid(basePost_color, basePost_tex, basePost_tex_width, basePost_tex_rot90)
+
+// base of fence, middle section
+BaseMiddle -->
+	case baseMiddle_asset!="":
+		insertAlongUV(0, baseMiddle_asset, base_height)
+	else:
+		extrude(world.up, base_height)
+		ColorAndTexture_Solid(baseMiddle_color, baseMiddle_tex, baseMiddle_tex_width, baseMiddle_tex_rot90)
+
+// main section's post
+MainPost -->
+	case postTop_asset=="" && (postTop=="" || postTop=="match terrain angle"):
+		extrude(world.up, post_height)
+		PostTrunk(post_shape, post_asset, post_color, post_tex, post_tex_width, post_tex_rot90, true)
+	case postTop_asset=="" && postTop=="flat":
+		extrude(world.up.flatTop, post_height + scope.sy)
+		PostTrunk(post_shape, post_asset, post_color, post_tex, post_tex_width, post_tex_rot90, true)
+	else:
+		extrude(world.up.flatTop, post_height + scope.sy)
+		split(y) { ~1: PostTrunk(post_shape, post_asset, post_color, post_tex, post_tex_width, post_tex_rot90, true)
+				 | postTop_height: PostTop(postTop, postTop_asset, post_color, post_tex, post_tex_width, post_tex_rot90) }
+	
+// trunk of main or upper post, excluding top
+// targetShape			["cube", "cylinder"] shape of post
+// targetAsset			filename of asset to use in place of post
+// targetColor			color of post
+// targetTexture		texture on post
+// targetTexture_width	texture width in m
+// targetTexture_rot90	[true, false] rotate texture 90 deg
+// isMain				[true, false] true: is part of main post, false: is part of upper post
+PostTrunk(targetShape, targetAsset, targetColor, targetTexture, targetTexture_width, targetTexture_rot90, isMain) -->
+	case targetAsset!="":
+		i(targetAsset)
+	case targetShape=="cylinder":
+		primitiveCylinder(nSides_primitive)
+		ColorAndTexture_Cylinder(targetColor, targetTexture, targetTexture_width, targetTexture_rot90)
+	else:
+		ColorAndTexture_Solid(targetColor, targetTexture, targetTexture_width, targetTexture_rot90, isMain)
+		
+// top of main or upper post
+// targetShape			["match terrain angle", "flat", "pyramid", "raised pyramid", "sphere", "large flat cap", "large pyramid"] shape of post top
+// targetAsset			filename of asset to use in place of post top
+// targetColor			color of post
+// targetTexture		texture on post
+// targetTexture_width	texture width in m
+// targetTexture_rot90	[true, false] rotate texture 90 deg
+PostTop(targetShape, targetAsset, targetColor, targetTexture, targetTexture_width, targetTexture_rot90) -->
+	case targetAsset!="":
+		i(targetAsset)
+	case targetShape=="pyramid":
+		PostTop_Pyramid(scope.sy, targetColor, targetTexture, targetTexture_width, targetTexture_rot90)
+	case targetShape=="raised pyramid":
+		[ s('0.8, '0.2, '0.8)
+		  center(xz)
+		  primitiveCube()
+		  ColorAndTexture_Solid(targetColor, targetTexture, targetTexture_width, targetTexture_rot90) ]
+		t(0, '0.2, 0)
+		s('1, '0.8, '1)
+		PostTop_Pyramid(scope.sy, targetColor, targetTexture, targetTexture_width, targetTexture_rot90)
+	case targetShape=="sphere":
+		[ primitiveSphere(nSides_primitive, nSides_primitive)
+		  ColorAndTexture_Sphere(targetColor, targetTexture, targetTexture_width, targetTexture_rot90) ]
+		s('0.7, '0.5, '0.7)
+		center(xz)
+		PostTop_Pyramid(scope.sy, targetColor, targetTexture, targetTexture_width, targetTexture_rot90)
+	case targetShape=="large flat cap":
+		primitiveCube()
+		split(y) { '0.25: s('1.1, '1, '1.1)
+						  center(xz)
+						  ColorAndTexture_Solid(targetColor, targetTexture, targetTexture_width, targetTexture_rot90)
+				 | '0.25: s('1.2, '1, '1.2)
+				 		  center(xz)
+				 		  ColorAndTexture_Solid(targetColor, targetTexture, targetTexture_width, targetTexture_rot90)
+				 | '0.5: s('1.3, '1, '1.3)
+				 		 center(xz)
+				 		 ColorAndTexture_Solid(targetColor, targetTexture, targetTexture_width, targetTexture_rot90) }
+	case targetShape=="large pyramid":
+		primitiveCube()
+		[ s('1.1, '0.2, '1.1)
+		  center(xz)
+		  ColorAndTexture_Solid(targetColor, targetTexture, targetTexture_width, targetTexture_rot90) ]
+		[ t(0, '0.2, 0)
+		  s('1.2, '0.2, '1.2)
+		  center(xz)
+		  ColorAndTexture_Solid(targetColor, targetTexture, targetTexture_width, targetTexture_rot90) ]
+		t(0, '0.4, 0)
+		s('1.3, '0.6, '1.3)
+		center(xz)
+		PostTop_Pyramid(scope.sy, targetColor, targetTexture, targetTexture_width, targetTexture_rot90)
+	else:
+		primitiveCube()
+		ColorAndTexture_Solid(targetColor, targetTexture, targetTexture_width, targetTexture_rot90)
+		
+// pyramid post top
+// height				height of pyramid
+// pyramidColor			pyramid color
+// pyramidTexture		texture on pyramid
+// pyramidTexture_width	texture width in m
+// pyramidTexture_rot90	[true, false] rotate texture 90 deg
+PostTop_Pyramid(height, pyramidColor, pyramidTexture, pyramidTexture_width, pyramidTexture_rot90) -->
+	primitiveCube()
+	comp(f) { bottom: reverseNormals()
+					  rotateScope(0, 0, 180)
+					  roofPyramid(atan(height/(0.5*scope.sx)))
+					  ColorAndTexture_Solid(pyramidColor, pyramidTexture, pyramidTexture_width, pyramidTexture_rot90) }
+			
+// main middle part of fence
+MainMiddle -->
+	SolidMiddle
+	VerticalBars
+	HorizontalBars
+	
+// solid middle part of fence
+SolidMiddle -->
+	case middle_asset!="":
+		i(middle_asset)
+	case middle_shape=="cube":
+		case middleIsGlass:
+			set(material.specular.r,0.8) set(material.specular.g,0.8) set(material.specular.b,0.8)
+            set(material.reflectivity,0.8) set(material.shininess,50) set(material.opacity, 0.3)
+			ColorAndTexture_Solid(middle_color, middle_tex, middle_tex_width, middle_tex_rot90)
+		else:
+			ColorAndTexture_Solid(middle_color, middle_tex, middle_tex_width, middle_tex_rot90)
+	case middle_shape=="plane":
+		case middleIsGlass:
+			set(material.specular.r,0.8) set(material.specular.g,0.8) set(material.specular.b,0.8)
+            set(material.reflectivity,0.8) set(material.shininess,50) set(material.opacity, 0.3)
+			split(z) { '0.5: comp(f) { front: ColorAndTexture_Plane(middle_color, middle_tex, middle_tex_width, middle_tex_rot90) } }
+		else:
+			split(z) { '0.5: comp(f) { front: ColorAndTexture_Plane(middle_color, middle_tex, middle_tex_width, middle_tex_rot90) } }
+	else:
+		NIL	
+	
+// upper section's post
+UpperPost -->
+	case upperPostTop_asset=="" && (upperPostTop=="" || upperPostTop=="match terrain angle"):
+		extrude(world.up, upperPost_height)
+		t(0, 0, 0.5*upperPost_depth)
+		r(-upper_angle, 0, 0)
+		t(0, 0, -0.5*upperPost_depth)
+		PostTrunk(upperPost_shape, upperPost_asset, upperPost_color, upperPost_tex, upperPost_tex_width, upperPost_tex_rot90, false)
+	case upperPostTop_asset=="" && upperPostTop=="flat":
+		extrude(world.up.flatTop, upperPost_height + scope.sy)
+		t(0, 0, 0.5*upperPost_depth)
+		r(-upper_angle, 0, 0)
+		t(0, 0, -0.5*upperPost_depth)
+		PostTrunk(upperPost_shape, upperPost_asset, upperPost_color, upperPost_tex, upperPost_tex_width, upperPost_tex_rot90, false)		
+	else:
+		extrude(world.up.flatTop, upperPost_height + scope.sy)
+		t(0, 0, 0.5*upperPost_depth)
+		r(-upper_angle, 0, 0)
+		t(0, 0, -0.5*upperPost_depth)
+		split(y) { ~1: PostTrunk(upperPost_shape, upperPost_asset, upperPost_color, upperPost_tex, upperPost_tex_width, upperPost_tex_rot90, false)
+				 | upperPostTop_height: PostTop(upperPostTop, upperPostTop_asset, upperPost_color, upperPost_tex, upperPost_tex_width, upperPost_tex_rot90) }
+
+// upper section's middle part of fence between posts
+UpperMiddle -->
+	case upperMiddle_asset!="":
+		i(upperMiddle_asset)
+	case upperMiddle_shape=="cube":
+		case upperMiddleIsGlass:
+			set(material.specular.r,0.8) set(material.specular.g,0.8) set(material.specular.b,0.8)
+            set(material.reflectivity,0.8) set(material.shininess,50) set(material.opacity, 0.3)
+			alignScopeToGeometry(yUp, 0, 2)
+			rotateScope(180, 0, 0)
+			t(0, 0, 0.5*upperMiddle_depth)
+			r(-upper_angle, 0, 0)
+			t(0, 0, -0.5*upperMiddle_depth)
+			ColorAndTexture_Solid(upperMiddle_color, upperMiddle_tex, upperMiddle_tex_width, upperMiddle_tex_rot90)
+		else:
+			alignScopeToGeometry(yUp, 0, 2)
+			rotateScope(180, 0, 0)
+			t(0, 0, 0.5*upperMiddle_depth)
+			r(-upper_angle, 0, 0)
+			t(0, 0, -0.5*upperMiddle_depth)
+			ColorAndTexture_Solid(upperMiddle_color, upperMiddle_tex, upperMiddle_tex_width, upperMiddle_tex_rot90)
+	case upperMiddle_shape=="barbed wire":
+		split(z) { '0.5: comp(f) { front: BarbedWire_NormalizeVecs(convert(x, scope, world, pos, 0, 1, 0) - convert(x, scope, world, pos, 0, 0, 0),
+																   convert(y, scope, world, pos, 0, 1, 0) - convert(y, scope, world, pos, 0, 0, 0),
+																   convert(z, scope, world, pos, 0, 1, 0) - convert(z, scope, world, pos, 0, 0, 0))
+								 }
+				 }
+	else:
+		NIL
+
+// barbed wire plane - normalize y vector		
+// vx, vy, vz		scope's unnormalized y vector
+BarbedWire_NormalizeVecs(vx, vy, vz) -->
+	BarbedWire_FixHeights(vy/vecLen(vx, vy, vz))
+	
+// barbed wire plane - create wires, fix heights based on angle of y vector from world.up
+BarbedWire_FixHeights(factor) -->
+	r(-upper_angle, 0, 0)
+	split(y) { ~barbedWire_dist*factor: NIL
+			 | barbedWire_height*factor: setupProjection(0, scope.xy, ~1, '1)
+			 							 texture(barbedWire_tex)
+			 							 projectUV(0)
+			 							 color(upperMiddle_color)
+			 							 Wire. }*
+		
+
+// ------------------------------
+// Horizontal Bars
+// ------------------------------
+
+// horizontal bars in fence middle
+HorizontalBars -->
+	case hasHorizBars:
+		alignScopeToGeometry(zUp, 2, 0)
+		s('1, '1, horizBar_depth)
+		center(z)
+		t(0, 0, horizBar_offset_depth)
+		HorizontalBars_NormalizeVec(convert(x, scope, world, pos, 0, 1, 0) - convert(x, scope, world, pos, 0, 0, 0),
+									convert(y, scope, world, pos, 0, 1, 0) - convert(y, scope, world, pos, 0, 0, 0),
+									convert(z, scope, world, pos, 0, 1, 0) - convert(z, scope, world, pos, 0, 0, 0))
+	else :
+		NIL
+		
+// horizontal bars - normalize y vector
+// vx, vy, vz		scope's unnormalized y vector
+HorizontalBars_NormalizeVec(vx, vy, vz) -->
+	HorizontalBars_FixHeights(vy/vecLen(vx, vy, vz))
+		
+// horizontal bars - fix heights based on angle of y vector from world.up
+// factor			multiply heights by this factor to get correctly positioned/sized horizontal bars
+HorizontalBars_FixHeights(factor) -->
+	case list_horizBarPositions=="":
+		split(y) { horizBarStart_height*factor: NIL
+				 | { horizBar_height*factor: HorizBar
+				   | horizBar_spacing*factor: NIL }* }
+	else:
+		HorizontalBars_Recursive(0, factor)
+	
+		
+// recursively create horizontal bars at each position in list
+// ind				start processing at this index
+// factor			multiply heights by this factor to get correctly positioned/sized horizontal bars
+HorizontalBars_Recursive(ind, factor) -->
+	case ind==list_horizBarPositions_size() || list_horizBarPositions_getVal(ind) + middleStart_height > post_height:
+		NIL
+	else:
+		HorizBar_CreateAtPos(list_horizBarPositions_getVal(ind), factor)
+		HorizontalBars_Recursive(ind + 1, factor)
+		
+// create horizontal bar at specified position
+// pos				position of horizontal bar, from bottom of middle part to bottom of horiz bar
+// factor			multiply heights by this factor to get correctly positioned/sized horizontal bars
+HorizBar_CreateAtPos(pos, factor) -->
+	split(y) { horizBar_height*factor: alignScopeToAxes(y)
+									   t(0, pos, 0)
+									   alignScopeToGeometry(zUp, 1, 0)
+									   HorizBar }
+
+// horizontal bar
+HorizBar -->
+	case horizBar_asset!="":
+		case horizBar_asset_rot90:
+			rotateScope(0, 0, -90)
+			i(horizBar_asset)
+		else:
+			i(horizBar_asset)
+	case horizBar_shape=="cylinder":
+		rotateScope(0, 0, -90)
+		primitiveCylinder(nSides_primitive)
+		ColorAndTexture_Cylinder(horizBar_color, horizBar_tex, horizBar_tex_width, horizBar_tex_rot90)
+	else:
+		ColorAndTexture_Solid(horizBar_color, horizBar_tex, horizBar_tex_width, horizBar_tex_rot90)
+	
+
+// ------------------------------
+// Vertical Bars
+// ------------------------------
+				
+// vertical bars in fence middle
+VerticalBars -->
+	case hasVertBars:
+		case list_vertBarPositions=="":
+			s('1, '1, vertBar_depth)
+			center(z)
+			t(0, 0, vertBar_offset_depth)
+			split(x) { ~vertBar_spacing: NIL
+					 | { vertBar_width: VertBar
+					   | ~vertBar_spacing: NIL }* }
+		else:
+			s('1, '1, vertBar_depth)
+			center(z)
+			t(0, 0, vertBar_offset_depth)
+			VerticalBars_Recursive(0)		
+	else:
+		NIL
+		
+// recursively create vertical bars at each position in list
+VerticalBars_Recursive(ind) -->
+	case ind==list_vertBarPositions_size():
+		NIL
+	else:
+		VertBar_CreateAtPos(list_vertBarPositions_getVal(ind))
+		VerticalBars_Recursive(ind + 1)
+
+		
+// create vertical bar at specified position
+// pos		position of vertical bar, from left side of middle part to left side of vertical bar
+VertBar_CreateAtPos(pos) -->
+	split(x) { scope.sx*pos/middle_width: NIL
+			 | vertBar_width: VertBar
+			 | ~1: NIL }
+
+// vertical bar - resize to make curve along top
+VertBar -->
+	case curveType=="triangle":
+		s('1, scope.sy - curveHeightDiff*curveMult, '1)
+		VertBar_SplitTop
+	case curveType=="v shaped":
+		s('1, scope.sy - curveHeightDiff*(1 - curveMult), '1)
+		VertBar_SplitTop
+	case curveType=="convex":
+		s('1, scope.sy - curveHeightDiff*curveMult*curveMult , '1)
+		VertBar_SplitTop
+	case curveType=="concave":
+		s('1, scope.sy - curveHeightDiff*(1 - curveMult*curveMult), '1)
+		VertBar_SplitTop
+	else:
+		VertBar_SplitTop
+		
+// vertical bar - split into main and top
+VertBar_SplitTop -->
+	case vertBarTop=="match terrain angle":
+		VertBarMain
+	case vertBarTop=="flat":
+		VertBar_FlatTop(scope.sy)
+	else:
+		split(y) { ~1: VertBarMain
+				 | vertBarTop_height: VertBarTop }
+				 
+// vertical bar - with flat top
+VertBar_FlatTop(h) -->
+	comp(f) { bottom: reverseNormals()
+					  alignScopeToAxes(y)
+					  extrude(world.up.flatTop, h)
+					  VertBarMain }
+
+		
+// main part of vertical bar	 
+VertBarMain -->
+	case vertBar_asset!="":
+		i(vertBar_asset)
+	case vertBar_shape=="cylinder":
+		primitiveCylinder(nSides_primitive)
+		ColorAndTexture_Cylinder(vertBar_color, vertBar_tex, vertBar_tex_width, vertBar_tex_rot90)
+	else:
+		ColorAndTexture_Solid(vertBar_color, vertBar_tex, vertBar_tex_width, vertBar_tex_rot90, true)
+
+// top of vertical bar
+VertBarTop -->
+	case vertBarTop_asset!="":
+		i(vertBarTop_asset)
+	case vertBarTop=="pointy":
+		primitiveCube()
+		t(0, '-1, 0)
+		comp(f) { top: s(vertBar_width, 2*vertBar_width, 0)
+					   t(0, -scope.sy + vertBar_depth, 0)
+					   roofGable(atan(vertBarTop_height/(0.5*vertBar_width)))
+					   s('1, '1, vertBar_depth)
+					   ColorAndTexture_Solid(vertBar_color, vertBar_tex, vertBar_tex_width, vertBar_tex_rot90) }
+	case vertBarTop=="cone":
+		primitiveCone(nSides_primitive)
+		ColorAndTexture_Cylinder(vertBar_color, vertBar_tex, vertBar_tex_width, vertBar_tex_rot90)
+	case vertBarTop=="flat":
+		primitiveCube()
+		ColorAndTexture_Solid(vertBar_color, vertBar_tex, vertBar_tex_width, vertBar_tex_rot90)
+	else:
+		ColorAndTexture_Solid(vertBar_color, vertBar_tex, vertBar_tex_width, vertBar_tex_rot90)
+			
+
+// ------------------------------
+// Color and Texture Functions
+// ------------------------------
+
+// set color and texture for each face of solid, do not align to world.up
+// myColor		hex color
+// myTex		texture filename
+// myTex_width	width of texture in m (if 0, use scope.sx)
+// myTex_rot90	[true, false] rotate texture 90 degrees
+ColorAndTexture_Solid(myColor, myTex, myTex_width, myTex_rot90) -->
+	ColorAndTexture_Solid(myColor, myTex, myTex_width, myTex_rot90, false)
+ 
+// set color and texture for each face of solid
+// myColor		hex color
+// myTex		texture filename
+// myTex_width	width of texture in m (if 0, use scope.sx)
+// myTex_rot90		[true, false] rotate texture 90 degrees
+// alignUp		[true, false] align scope with world.up before texturing (for vertical parts)
+ColorAndTexture_Solid(myColor, myTex, myTex_width, myTex_rot90, alignUp) -->
+	case myTex!="":
+		case alignUp:
+			comp(f) { vertical: alignScopeToAxes(y)
+							 	ColorAndTexture_Plane(myColor, myTex, myTex_width, myTex_rot90)
+					| all: ColorAndTexture_Plane(myColor, myTex, myTex_width, myTex_rot90) }
+		else:
+			comp(f) { all: ColorAndTexture_Plane(myColor, myTex, myTex_width, myTex_rot90) }
+	else:
+		color(myColor)	
+
+// set color and texture on plane
+// myColor		hex color
+// myTex		texture filename
+// myTex_width	width of texture in m (if 0, use scope.sx)
+// myTex_rot90	[true, false] rotate texture 90 degrees
+ColorAndTexture_Plane(myColor, myTex, myTex_width, myTex_rot90) -->
+	case myTex!="":
+		case myTex_rot90:
+			setupProjection(0, scope.xy, tex_height(myTex, myTex_width), tex_width(myTex_width))
+			texture(myTex)
+			projectUV(0)
+			rotateUV(0, 90)
+			color(myColor)
+		else:
+			setupProjection(0, scope.xy, tex_width(myTex_width), tex_height(myTex, myTex_width))
+			texture(myTex)
+			projectUV(0)
+			color(myColor)
+	else:
+		color(myColor)
+
+// set color and texture on cylinder with predefined texture coords
+// myColor		hex color
+// myTex		texture filename
+// myTex_width	width of texture in m (if 0, use predefined texture coords)
+// myTex_rot90	[true, false] rotate texture 90 degrees
+ColorAndTexture_Cylinder(myColor, myTex, myTex_width, myTex_rot90) -->
+	case myTex!="":
+		case myTex_rot90:
+			scaleUV(0, tex_uFactor_cyl2(myTex, myTex_width), tex_vFactor_cyl2(myTex_width))
+			rotateUV(0, 90)
+			texture(myTex)
+			color(myColor)
+		else:
+			scaleUV(0, tex_uFactor_cyl(myTex_width), tex_vFactor_cyl(myTex, myTex_width))
+			texture(myTex)
+			color(myColor)
+	else:
+		color(myColor)
+
+// set color and texture on sphere with predefined texture coords
+// myColor		hex color
+// myTex		texture filename
+// myTex_width	width of texture in m (if 0, use predefined texture coords)
+// myTex_rot90	[true, false] rotate texture 90 degrees
+ColorAndTexture_Sphere(myColor, myTex, myTex_width, myTex_rot90) -->
+	case myTex!="":
+		case myTex_rot90:
+			scaleUV(0, tex_vFactor_sphere(myTex, myTex_width), tex_uFactor_sphere(myTex_width))
+			rotateUV(0, 90)
+			texture(myTex)
+			color(myColor)
+		else:
+			scaleUV(0, tex_uFactor_sphere(myTex_width), tex_vFactor_sphere(myTex, myTex_width))
+			texture(myTex)
+			color(myColor)
+	else:
+		color(myColor)
+
+
+// ------------------------------
+// Handles and Ghosts
+// ------------------------------
+	
+Handle_MainPost --> NIL
+Handle_MainMiddle --> NIL
+
+// ghost shapes for occlusion testing
+Ghost_BaseFootprint -->
+	case occlusionLabel=="":
+		NIL
+	else:
+		extrude(world.up, base_height)
+		label(occlusionLabel)
+		NIL
+	
+Ghost_FencePart -->
+	case occlusionLabel=="":
+		NIL
+	else:
+		label(occlusionLabel)
+		NIL
+	
+Ghost_UpperPost -->
+	case occlusionLabel=="":
+		NIL
+	else:
+		t(0, 0, 0.5*upperPost_depth)
+		r(-upper_angle, 0, 0)
+		t(0, 0, -0.5*upperPost_depth)
+		label(occlusionLabel)
+		NIL
+
+Ghost_UpperMiddle -->
+	case occlusionLabel=="":
+		NIL
+	else:
+		t(0, 0, 0.5*upperMiddle_depth)
+		r(-upper_angle, 0, 0)
+		t(0, 0, -0.5*upperMiddle_depth)
+		label(occlusionLabel)
+		NIL
+
+
+// ------------------------------
+// Style: Picket Fence
+// ------------------------------
+	
+
+// style:  picket fence
+style Picket_Fence
+
+attr hasBase = false
+// ------------------------------
+attr postTop = "pyramid"
+attr postTop_height = 0.12
+// ------------------------------
+attr middleStart_height = 0
+attr postMiddleDiff_height = postTop_height
+// ------------------------------
+attr horizBar_height = 0.09
+attr horizBar_spacing = 0.55
+// ------------------------------
+attr vertBarTop = "pointy"
+attr vertBarTop_height = 0.05
+// ------------------------------
+attr curveType = "concave"
+// ------------------------------
+attr hasUpper = false
+		 
+		 
+// ------------------------------
+// Style: Log Fence
+// ------------------------------
+	
+style Log_Fence
+
+attr hasBase = false
+// ------------------------------
+attr post_shape = "cylinder"
+// ------------------------------
+attr middle_depth = horizBar_depth
+attr middleStart_height = 0
+attr postMiddleDiff_height = 0
+// ------------------------------
+attr horizBar_shape = "cylinder"
+attr horizBar_height = 0.2
+attr horizBar_spacing = 0.3
+attr horizBarStart_height = 0.3
+attr horizBar_depth = 0.2
+attr horizBar_offset_depth = 0
+// ------------------------------
+attr hasVertBars = false
+// ------------------------------
+attr hasUpper = false
+// ------------------------------
+attr post_color = "#614126"
+attr post_tex = "Fences/Textures/wood_05.jpg"
+attr post_tex_width = 0.2
+attr post_tex_rot90 = true
+attr horizBar_color = "#614126"
+attr horizBar_tex = "Fences/Textures/wood_05.jpg"
+attr horizBar_tex_width = 0.2
+attr horizBar_tex_rot90 = true
+	
+	
+// ------------------------------
+// Style: Wooden Fence
+// ------------------------------
+	
+	
+style Wooden_Fence
+
+attr hasBase = false
+// ------------------------------
+attr middle_depth = horizBar_depth
+attr middleStart_height = 0
+attr postMiddleDiff_height = 0
+// ------------------------------
+attr horizBar_height = 0.15
+attr horizBar_spacing = 0.2
+attr horizBarStart_height = 0.25
+attr horizBar_depth = 0.05
+attr horizBar_offset_depth = 0
+// ------------------------------
+attr hasVertBars = false
+// ------------------------------
+attr hasUpper = false
+// ------------------------------
+attr post_color = "#9E7442"
+attr horizBar_color = "#9E7442"
+	
+
+// ------------------------------
+// Style: Rope Fence
+// ------------------------------
+
+style Rope_Fence
+
+attr hasBase = false
+// ------------------------------
+attr post_shape = "cylinder"
+attr post_width = 0.12
+attr post_height = 1
+// ------------------------------
+attr hasHorizBars = true
+attr horizBar_asset = "Fences/Objects/twistedRope.obj"
+attr horizBar_height = 0.2
+attr horizBarStart_height = 0.65
+attr horizBar_depth = 0.05
+// ------------------------------
+attr hasVertBars = false
+// ------------------------------
+attr hasUpper = false
+// ------------------------------
+attr post_tex = "Fences/Textures/bark_01.jpg"
+
+
+// ------------------------------
+// Style: Iron Fence
+// ------------------------------
+
+style Iron_Fence
+
+attr hasBase = false
+// ------------------------------
+attr post_width = 0.07
+attr post_height = 2
+attr postTop = "sphere"
+attr postTop_height = 0.05
+// ------------------------------
+attr middle_depth = horizBar_depth
+attr middleStart_height = 0.1
+attr postMiddleDiff_height = 0.1
+// ------------------------------
+attr horizBarPositions = "0;1.5;1.75;"
+attr horizBar_height = 0.05
+attr horizBar_depth = 0.05
+attr horizBar_offset_depth = 0
+// ------------------------------
+attr vertBar_width = 0.03
+attr vertBar_spacing = 0.1
+attr vertBar_depth = 0.05
+attr vertBar_offset_depth = 0
+attr vertBarTop = "match terrain angle"
+// ------------------------------
+attr hasUpper = false
+// ------------------------------
+attr post_color = "#000000"
+attr horizBar_color = "#000000"
+attr vertBar_color = "#000000"
+
+
+// ------------------------------
+// Style: Iron Fence 2
+// ------------------------------
+
+style Iron_Fence_2
+
+attr hasBase = false
+// ------------------------------
+attr post_width = 0.05
+attr postTop = "raised pyramid"
+// ------------------------------
+attr horizBar_height = 0.02
+attr horizBar_spacing = 0.88
+attr horizBar_depth = 0.02
+attr horizBar_offset_depth = -0.01
+// ------------------------------
+attr vertBar_asset = "Fences/Objects/twistedBar.obj"
+attr vertBar_width = 0.02
+attr vertBar_depth = 0.02
+attr vertBar_offset_depth = 0.01
+attr vertBarTop = "cone"
+attr vertBarTop_height = 0.04
+// ------------------------------
+attr hasUpper = false
+// ------------------------------
+attr post_color = "#444444"
+attr horizBar_color = "#444444"
+attr vertBar_color = "#444444"
+
+
+// ------------------------------
+// Style: Balcony Railing
+// ------------------------------
+
+style Balcony_Railing
+
+attr hasBase = false
+// ------------------------------
+attr post_width = 0.05
+attr post_height = 0.92
+// ------------------------------
+attr postMiddleDiff_height = 0
+attr horizBarPositions = "0;"
+attr horizBar_height = 0.03
+attr horizBar_offset_depth = 0
+// ------------------------------
+attr vertBar_width = 0.03
+attr vertBar_offset_depth = 0
+// ------------------------------
+attr upperPost_height = 0.04
+attr upperPost_depth = 0.06
+attr upperMiddle_height = 0.04
+// ------------------------------
+attr post_color = "#000000"
+attr horizBar_color = "#000000"
+attr vertBar_color = "#000000"
+attr upperPost_color = "#000000"
+attr upperMiddle_color = "#000000"
+
+
+// ------------------------------
+// Style: Glass Fence
+// ------------------------------
+
+style Glass_Fence
+
+attr hasBase = false
+// ------------------------------
+attr post_height = 2
+attr postTop = "flat"
+attr postTop_height = 0.1
+// ------------------------------
+attr middle_shape = "cube"
+attr middleIsGlass = true
+attr middle_depth = 0.02
+// ------------------------------
+attr hasHorizBars = false
+// ------------------------------
+attr hasVertBars = false
+// ------------------------------
+attr hasUpper = false
+// ------------------------------
+
+
+// ------------------------------
+// Style: Residential Fence
+// ------------------------------
+
+style Residential_Fence
+
+attr base_height = 0.2
+attr base_depth = post_depth
+// ------------------------------
+attr post_height = 1.5
+// ------------------------------
+attr middleStart_height = 0
+attr postMiddleDiff_height = 0
+// ------------------------------
+attr horizBar_height = 0.09
+attr horizBar_spacing = 0.01
+attr horizBarStart_height = 0
+attr horizBar_offset_depth = 0
+// ------------------------------
+attr hasVertBars = false
+// ------------------------------
+attr upperMiddleIsGlass = true
+attr upperPost_height = 0.5
+attr upperMiddle_height = 0.5
+attr upperMiddle_depth = 0.02
+// ------------------------------
+attr basePost_color = "#9E7442"
+attr baseMiddle_color = "#9E7442"
+attr post_color = "#9E7442"
+attr horizBar_color = "#9E7442"
+attr upperPost_color = "#9E7442"
+
+
+// ------------------------------
+// Style: Chain Link Fence
+// ------------------------------
+
+style Chain_Link_Fence
+
+attr hasBase = true
+attr base_height = 0.3
+attr base_depth = 0.5
+// ------------------------------
+attr post_shape = "cylinder"
+attr post_height = 2
+attr post_width = 0.07
+// ------------------------------
+attr middle_shape = "plane"
+attr middle_depth = 0.01
+attr middleStart_height = 0
+attr postMiddleDiff_height = 0
+// ------------------------------
+attr hasHorizBars = true
+attr horizBar_shape = "cylinder"
+attr horizBarPositions = "0.93;1.93"
+attr horizBar_height = 0.07
+attr horizBar_depth = 0.07
+attr horizBar_offset_depth = 0
+// ------------------------------
+attr hasVertBars = false
+// ------------------------------
+attr hasUpper = true
+attr upper_angle = 20
+attr upperPost_shape = "cylinder"
+attr upperPost_height = 0.5
+attr upperPost_depth = 0.07
+attr upperPostTop = ""
+attr upperPostTop_height = 0.1
+attr upperMiddle_shape = "barbed wire"
+attr upperMiddle_height = 0.5
+attr upperMiddle_depth = 0.01
+// ------------------------------
+attr basePost_tex = "Fences/Textures/concrete_01.jpg"
+attr basePost_tex_width = 1
+attr baseMiddle_tex = "Fences/Textures/concrete_01.jpg"
+attr baseMiddle_tex_width = 1
+attr post_color = "#000000"
+attr middle_color = "#000000"
+attr middle_tex = "Fences/Textures/chainLink_01.png"
+attr middle_tex_width = 1.1
+attr horizBar_color = "#000000"
+attr upperPost_color = "#000000"
+attr upperMiddle_color = "#000000"
+
+// ------------------------------
+// Style: Jersey Barrier
+// ------------------------------
+
+style Jersey_Barrier
+
+attr baseMiddle_asset = "Fences/Objects/jerseyBarrier.obj"
+attr base_height = 0.82
+attr base_depth = 0.71
+// ------------------------------
+attr hasPosts = false
+// ------------------------------
+attr middle_width = 3
+// ------------------------------
+attr hasHorizBars = false
+// ------------------------------
+attr hasVertBars = false
+// ------------------------------
+attr hasUpper = false
+
+
+// ------------------------------
+// Style: Guard Rail
+// ------------------------------
+
+style Guard_Rail
+
+attr baseMiddle_asset = "Fences/Objects/guardRail.obj"
+attr base_height = 0.71
+attr base_depth = 0.3
+// ------------------------------
+attr hasPosts = false
+// ------------------------------
+attr middle_width = 2
+// ------------------------------
+attr hasHorizBars = false
+// ------------------------------
+attr hasVertBars = false
+// ------------------------------
+attr hasUpper = false
+
+
+// ------------------------------
+// Style: Highway Sound Barrier
+// ------------------------------
+
+style Highway_Sound_Barrier
+
+
+attr basePost_asset = "Fences/Objects/jerseyBarrier.obj"
+attr baseMiddle_asset = "Fences/Objects/jerseyBarrier.obj"
+attr base_height = 0.82
+attr base_depth = 0.71
+// ------------------------------
+attr post_width = 0.2
+attr post_height = 3.5
+attr postTop = "flat"
+attr postTop_height = 0.2
+// ------------------------------
+attr middle_shape = "cube"
+attr middle_width = 3.5
+attr middle_depth = 0.15
+attr middleStart_height = 0
+attr postMiddleDiff_height = horizBar_height
+// ------------------------------
+attr horizBarPositions = "2.2;3.3"
+attr horizBar_height = 0.2
+attr horizBar_depth = 0.18
+attr horizBar_offset_depth = 0
+// ------------------------------
+attr hasVertBars = false
+// ------------------------------
+attr hasUpper = false
+// ------------------------------
+attr post_color = "#BE9B87"
+attr middle_color = "#8C6C5D"
+attr horizBar_color = "#BE9B87"
+
+
+// ------------------------------
+// Style: Berlin Wall
+// ------------------------------
+
+style Berlin_Wall
+
+attr baseMiddle_asset = "Fences/Objects/taperedBase.obj"
+attr base_height = 0.2
+attr base_depth = 0.55
+// ------------------------------
+attr hasPosts = false
+attr post_height = 3.4
+// ------------------------------
+attr middle_shape = "cube"
+attr middle_width = 1.2
+attr middle_depth = 0.15
+attr middleStart_height = 0
+attr postMiddleDiff_height = 0.4
+// ------------------------------
+attr horizBar_shape = "cylinder"
+attr horizBarPositions = "3"
+attr horizBar_height = 0.4
+attr horizBar_depth = 0.4
+attr horizBar_offset_depth = 0
+// ------------------------------
+attr hasVertBars = false
+// ------------------------------
+attr hasUpper = false
+// ------------------------------
+attr middle_color = "#CCCCCC"
+attr horizBar_color = "#CCCCCC"
+
+
+// ------------------------------
+// Style: Traffic Cones
+// ------------------------------
+
+style Traffic_Cones
+
+attr hasBase = false
+// ------------------------------
+attr post_asset = "Fences/Objects/trafficCone.obj"
+attr post_width = 0.38
+attr post_height = 0.71
+// ------------------------------
+attr hasHorizBars = false
+// ------------------------------
+attr hasVertBars = false
+// ------------------------------
+attr hasUpper = false
+
+
+// ------------------------------
+// Style: Hedge
+// ------------------------------
+
+style Hedge
+
+attr hasBase = true
+attr base_height = 1.2
+attr base_depth = 0.5
+// ------------------------------
+attr hasPosts = false
+// ------------------------------
+attr middle_shape = "none"
+// ------------------------------
+attr hasHorizBars = false
+// ------------------------------
+attr hasVertBars = false
+// ------------------------------
+attr hasUpper = false
+// ------------------------------
+attr baseMiddle_tex = "Fences/Textures/hedge_01.jpg"
+attr baseMiddle_tex_width = 1
+
+
+

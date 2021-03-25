@@ -1,0 +1,68 @@
+/**
+ * File:    Fence_On_Polygon_Simple.cga
+ * Created: 13 Jun 2018 08:30:05 GMT
+ * Author:  Esri R&D Center Zurich
+ */
+
+version "2019.1"
+
+
+/*
+
+Input shape:  polygon or set of edges
+
+Fences are created along each edge of the input polygon.  Fences are centered (in z) on the edge, and
+fence posts occur on the polygon vertices.
+  
+*/
+
+
+import Fence:"/ESRI.lib/rules/Fences/Fence_On_Graph_Simple.cga"
+
+
+// ------------------------------
+// Start Rule
+// ------------------------------
+
+// fence on polygon
+@StartRule
+Generate -->
+	set(Fence.createEndPost, 1)		// for polygons, always create space for end post
+	comp(e) { all: Edge } 
+	
+			
+// ------------------------------
+// Fence Footprints
+// ------------------------------
+
+// edge (A,B)
+Edge -->
+	rotateScope(90, 0, 180)	// rotate so that x is along edge from A to B, z is front to back
+	s(scope.sx + Fence.post_width, 0, Fence.fence_depth)
+	center(xz)
+	primitiveQuad
+	CreateQuery(scope.sx)
+	
+CreateQuery(x) -->
+	s(Fence.post_width, '1, '1)
+	t(x-Fence.post_width, 0, 0)
+	TestLastPost(x)
+		
+TestLastPost(x) -->
+	case touches(intra):
+		set(Fence.nilEndPost, true)		// leave space, don't create post
+		ResetFootprint(x)
+	else:
+		set(Fence.nilEndPost, false)	// create post
+		ResetFootprint(x)
+		
+ResetFootprint(x) -->
+	t(-x+Fence.post_width, 0, 0)
+	s(x, '1, '1)
+	Footprint
+	
+Footprint -->
+	setupProjection(0, scope.zx, '1, '1)
+	projectUV(0)
+	rotateUV(0, -90)
+	Fence.Footprint

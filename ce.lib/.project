@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>ce.lib</name>
+	<comment></comment>
+	<projects>
+	</projects>
+	<buildSpec>
+	</buildSpec>
+	<natures>
+		<nature>com.procedural.cityengine.lib</nature>
+		<nature>com.procedural.cityengine</nature>
+	</natures>
+</projectDescription>

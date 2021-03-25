@@ -1,0 +1,26 @@
+version "2019.1"
+
+@Hidden
+attr SETBACK_SAME_ATTR = 0
+@Hidden
+attr SETBACK_PER_EDGE_ATTR = "0;"
+@Hidden
+attr SETBACK_REMAINDER = 0
+
+@Hidden
+SETBACK_SAME -->
+	case SETBACK_REMAINDER == 0:
+		setback(SETBACK_SAME_ATTR) { all : SETBACK_SAME. }
+	case SETBACK_REMAINDER == 1:
+		setback(SETBACK_SAME_ATTR) { all : NIL | remainder : SETBACK_PER_EDGE. }
+	else:
+		setback(SETBACK_SAME_ATTR) { all : SETBACK_SAME. | remainder : SETBACK_PER_EDGE. }
+
+@Hidden
+SETBACK_PER_EDGE -->
+	case SETBACK_REMAINDER == 0:
+		setback(comp(fe) { all : float(listItem(SETBACK_PER_EDGE_ATTR, comp.index)) }) { all : SETBACK_PER_EDGE. }
+	case SETBACK_REMAINDER == 1:
+		setback(comp(fe) { all : float(listItem(SETBACK_PER_EDGE_ATTR, comp.index)) }) { all : NIL | remainder : SETBACK_PER_EDGE. }
+	else:
+		setback(comp(fe) { all : float(listItem(SETBACK_PER_EDGE_ATTR, comp.index)) }) { all : SETBACK_PER_EDGE. | remainder : SETBACK_PER_EDGE. }

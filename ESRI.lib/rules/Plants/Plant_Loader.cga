@@ -1,0 +1,370 @@
+/**
+ * File:    Plant_Loader.cga
+ * Created: 18 Feb 2019 15:13:52 GMT
+ * Author:  Esri R&D Center Zurich
+ */
+
+version "2019.1"
+
+
+######################################################
+# Control Attributes (set by user or geodatabase)
+#
+
+@Order(1) @Enum("Alder Buckthorn", "Amazon Sword Plant", "American Chestnut", "American Sycamore", "Apricot", "Australian Pine", "Baldcypress", "Balsam Fir", "Bamboo", "Banana Tree", "Basswood", "Bay Laurel", "Black Locust", "Blue Gum Eucalyptus", "Boxwood", "Cabbage Palm Fern", "California Bay", "California Incense Cedar", "California Palm", "California Redwood", "California Walnut", "Coconut Palm", "Common Hawthorn", "Common Whitebeam", "Conker Tree", "Date Palm", "Desert Willow", "Douglas Fir", "European Beech", "European Larch", "Ficus", "Field Elm", "Flannelbush", "Flowering Dogwood", "Giant Sequoia", "Hedgehog Agave", "Japanese Angelica Tree", "Lacy Tree Philodendron", "Leyland Cypress", "Lily Of The Valley", "Lodgepole Pine", "Mediterranean Buckthorn", "Mexican Palmetto", "Mountain Mahogany", "Northern Red Oak", "Norway Maple", "Norway Spruce", "Orange Tree", "Orchid", "Oval Leaved Privet", "Palm Lily", "Palo Verde", "Paper Birch", "Parlour Palm", "Prickly Pear Cactus", "Red Alder", "Red Hickory", "Rhododendron Azaleas", "Rose", "Ruffle Palm", "Saguaro Cactus", "Sassafras", "Scots Pine", "Sea Islands Yucca", "Shadbush", "Snake Plant", "Southern Magnolia", "Spanish Broom", "Strawberry Tree", "Sugar Maple", "Sunflower", "Sweetgum", "Umbrella Acacia", "Western Juniper", "White Ash", "White Oak", "White Poplar", "White Willow", "Witch Hazel", "", "_____________________________", "GENERICS", "", "Generic Dead Tree", "Generic Stump", "Generic Unknown", "", "_____________________________", "PROXIES", "", "Algarrobo", "American Elderberry", "American Pepper", "American Silverberry", "Athel Tamarisk", "Avocado", "Black Tupelo", "Buttonbush", "Canada Buffaloberry", "Chinaberry Tree", "Chinese Tallow Tree", "Common Hackberry", "Common Holly", "Common Persimmon", "Desert Bitterbrush", "European Hornbeam", "Giant Chinquapin", "Honey Locust", "Hophornbeam", "Huckleberry Shrub", "Japanese Hemlock", "Japanese Nutmeg", "Judas Tree", "Lawson Cypress", "Loblolly Bay", "Mexican Buckeye", "Necklacepod", "Northern Bilberry", "Northern White Cedar", "Octopus Tree", "Osage Orange", "Paper Bark Tree", "Pawpaw", "Persian Silk Tree", "Princess Tree", "Smooth Sumac", "Sourwood", "Southern Wax Myrtle", "Tanoak", "Tree Of Heaven", "Turkish Hazel", "Western Soapberry", "White Mulberry", "Yellow Poplar", "Yew")
+attr Name 				= "Orange Tree" 
+@Order(2) @Range(min=0.5, max=80, restricted=false) @Distance
+attr Height 			= getStandardHeight					# default depends on Name (i.e. adapts if user selects another plant (if not overwritten by user))
+@Order(3) @Range(min=0.5, max=30, restricted=false) @Distance
+attr Radius 			= getRadius 						# default depends on Name and Height (and adapts in case user adjusts only height in Inspector)
+
+@Group("Options",4) @Order(1) @Enum("Realistic", "Schematic", "Fan")
+attr Representation		= "Realistic"
+@Group("Options") @Order(2) @Range(min=0, max=1) 
+attr Transparency 		= 0 
+@Group("Options") @Order(3) @Color
+attr OverwriteColor 	= "" 
+@Group("Options") @Order(4)  
+attr RandomRotation 	= true 
+@Group("Options") @Order(5) @Description("Note that this triples the instance count e.g. web scenes get three times bigger") 
+attr RandomBrightness 	= false 
+@Group("Options") @Order(5) @Enum("Mature only", "Mature and young") 
+attr RandomHeights 		= "Mature and young"
+@Group("Options") @Order(6) @Enum("None", "Metadata", "Instance Information") @Description("Instance information for 3rd party applications.")
+attr Reporting			= "None"
+
+
+# Constants
+const AssetFolder					= "/ESRI.lib/assets/Webstyles/Vegetation" 							# no "/" at the end (taken care of below)
+const FallbackPlant					= "Generic Unknown"									# this plant representation is used in case the user-selected plant does not exist in library
+const RandomRadiusDeviation			= 0.10												# plant radius varies plus/minus within this percentage
+const RandomHeightYoungPercentage	= case RandomHeights=="Mature only": 0 else: 0.33 	# this percentage gives random heights below the minheight 
+
+
+
+######################################################
+# Library Functions (suited for external usage)
+#
+
+# attribute lookups
+getGenus(commonName)				= _genus(_indexFromCommonName(commonName))
+getSpecies(commonName)				= _species(_indexFromCommonName(commonName))
+getStandardHeight(commonName)		= _heightAvg(_indexFromCommonName(commonName))
+getMinimumHeight(commonName)		= _heightMin(_indexFromCommonName(commonName))
+getMaximumHeight(commonName)		= _heightMax(_indexFromCommonName(commonName))
+getRandomHeight(commonName)			= _randomHeight(_indexFromCommonName(commonName))
+getStandardRadius(commonName)		= _radiusAvg(_indexFromCommonName(commonName))
+getStandardCrownHeight(commonName)	= _crownHeightAvg(_indexFromCommonName(commonName))
+getStandardTrunkRadius(commonName)	= _trunkRadiusAvg(_indexFromCommonName(commonName))
+getCategory(commonName)				= _category(_indexFromCommonName(commonName))
+getContinents(commonName)			= _continents(_indexFromCommonName(commonName))
+getCrownShape(commonName)			= _crownShape(_indexFromCommonName(commonName))
+isProxy(commonName)					= _proxy(_indexFromCommonName(commonName)) != ""
+
+# attribute lookups assuming that Name attr has been set correctly set
+getGenus			= _genus(_indexFromCommonName(Name))
+getSpecies			= _species(_indexFromCommonName(Name))
+getStandardHeight	= _heightAvg(_indexFromCommonName(Name))
+getMinimumHeight	= _heightMin(_indexFromCommonName(Name))
+getMaximumHeight	= _heightMax(_indexFromCommonName(Name))
+getRandomHeight		= _randomHeight(_indexFromCommonName(Name))
+getStandardRadius	= _radiusAvg(_indexFromCommonName(Name))
+getCategory			= _category(_indexFromCommonName(Name))
+getContinents		= _continents(_indexFromCommonName(Name))
+getHardinessZoneMin	= _zoneMin(_indexFromCommonName(Name))
+getHardinessZoneMax	= _zoneMax(_indexFromCommonName(Name))
+getCrownShape		= _crownShape(_indexFromCommonName(Name))
+isProxy				= _proxy(_indexFromCommonName(Name)) != ""
+
+# attribute lookups assuming that Name and Height have been set
+getRadius			= _radius(_indexFromCommonName(Name),Height)			# relative to current height
+getRandomRadius		= _randomRadius(_indexFromCommonName(Name),Height)		# +-5% of default radius
+getCrownHeight		= _crownHeight(_indexFromCommonName(Name),Height)		# relative to current height
+
+# attribute lookups assuming that Name and Radius have been set
+getTrunkRadius		= _trunkRadius(_indexFromCommonName(Name),Radius)		# relative to current radius
+
+# general utility functions
+isPlantInLibrary(commonName)	= listIndex(_dataCommonName,commonName) >= 0	
+
+# utility functions needed for setups which are driven by latin names (i.e. genus and species) 
+isPlantInLibrary(genus,species) = listIndex(_dataLatinName,genus+" "+species) >= 0
+isGenusInLibrary(genus)			= listIndex(_dataGenus,genus) >= 0
+getCommonName(genus,species)	= _commonName(_indexFromLatinName(genus,species))	# NOTE: in case species is not given or wrong, then it falls back to first plant entry with this genus (i.e. first entry should be a very common species of this genus) 
+
+
+
+######################################################
+# Library data with accessors (for internal usage only)
+# 
+
+# number of plants in library
+const nPlants 	= 127
+const nModels	= 82	# models (= non-proxies) MUST be listed first in the data (see _getAsset function)
+
+# metadata
+const _dataCommonName 		= "Alder Buckthorn;Amazon Sword Plant;American Chestnut;American Sycamore;Apricot;Australian Pine;Baldcypress;Balsam Fir;Bamboo;Banana Tree;Basswood;Bay Laurel;Black Locust;Blue Gum Eucalyptus;Boxwood;Cabbage Palm Fern;California Bay;California Incense Cedar;California Palm;California Redwood;California Walnut;Coconut Palm;Common Hawthorn;Common Whitebeam;Conker Tree;Date Palm;Desert Willow;Douglas Fir;European Beech;European Larch;Ficus;Field Elm;Flannelbush;Flowering Dogwood;Generic Dead Tree;Generic Stump;Generic Unknown;Giant Sequoia;Hedgehog Agave;Japanese Angelica Tree;Lacy Tree Philodendron;Leyland Cypress;Lily Of The Valley;Lodgepole Pine;Mediterranean Buckthorn;Mexican Palmetto;Mountain Mahogany;Northern Red Oak;Norway Maple;Norway Spruce;Orange Tree;Orchid;Oval Leaved Privet;Palm Lily;Palo Verde;Paper Birch;Parlour Palm;Prickly Pear Cactus;Red Alder;Red Hickory;Rhododendron Azaleas;Rose;Ruffle Palm;Saguaro Cactus;Sassafras;Scots Pine;Sea Islands Yucca;Shadbush;Snake Plant;Southern Magnolia;Spanish Broom;Strawberry Tree;Sugar Maple;Sunflower;Sweetgum;Umbrella Acacia;Western Juniper;White Ash;White Oak;White Poplar;White Willow;Witch Hazel;Algarrobo;American Elderberry;American Pepper;American Silverberry;Athel Tamarisk;Avocado;Black Tupelo;Buttonbush;Canada Buffaloberry;Chinaberry Tree;Chinese Tallow Tree;Common Hackberry;Common Holly;Common Persimmon;Desert Bitterbrush;European Hornbeam;Giant Chinquapin;Honey Locust;Hophornbeam;Huckleberry Shrub;Japanese Hemlock;Japanese Nutmeg;Judas Tree;Lawson Cypress;Loblolly Bay;Mexican Buckeye;Necklacepod;Northern Bilberry;Northern White Cedar;Octopus Tree;Osage Orange;Paper Bark Tree;Pawpaw;Persian Silk Tree;Princess Tree;Smooth Sumac;Sourwood;Southern Wax Myrtle;Tanoak;Tree Of Heaven;Turkish Hazel;Western Soapberry;White Mulberry;Yellow Poplar;Yew;"
+const _dataLatinName 		= "Frangula Alnus;Echinodorus Bleheri;Castanea Dentata;Platanus Occidentalis;Prunus Armeniaca;Casuarina Equisetifolia;Taxodium Distichum;Abies Balsamea;Phyllostachys Aurea;Musa Acuminata;Tilia Americana;Laurus Nobilis;Robinia Pseudoacacia;Eucalyptus Globulus;Buxus Sempervirens;Phlebodium Aureum;Umbellularia Californica;Calocedrus Decurrens;Washingtonia Filifera;Sequoia Sempervirens;Juglans Regia;Cocos Nucifera;Crataegus Monogyna;Sorbus Aria;Aesculus Hippocastanum;Phoenix Dactylifera;Chilopsis Linearis;Pseudotsuga Menziesii;Fagus Sylvatica;Larix Decidua;Ficus Benjamina;Ulmus Minor;Fremontodendron Californicum;Cornus Florida;Generic Dead;Stump;Unknown;Sequoiadendron Giganteum;Agave Stricta;Aralia Elata;Philodendron Selloum;Cupressus Leylandii;Convallaria Majalis;Pinus Contorta;Rhamnus Alaternus;Sabal Mexicana;Cercocarpus Montanus;Quercus Rubra;Acer Platanoides;Picea Abies;Citrus Sinensis;Bulbophyllum Phalaenopsis;Ligustrum Ovalifolium;Cordyline Petiolaris;Parkinsonia Aculeata;Betula Papyrifera;Chamaedorea Elegans;Opuntia Aciculata;Alnus Rubra;Carya Ovalis;Rhododendron Tsutsuji;Rosa Grandiflora;Aiphanes Horrida;Carnegiea Saguaro;Sassafras Albidum;Pinus Sylvestris;Yucca Gloriosa;Amelanchier Canadensis;Sansevieria Trifasciata;Magnolia Grandiflora;Spartium Junceum;Arbutus Unedo;Acer Saccharum;Helianthus Annuus;Liquidambar Styraciflua;Acacia Tortilis;Juniperus Occidentalis;Fraxinus Americana;Quercus Alba;Populus Tremuloides;Salix Alba;Hamamelis Virginiana;Prosopis Nigra;Sambucus Canadensis;Schinus Molle;Elaeagnus Commutata;Tamarix Aphylla;Persea Americana;Nyssa Sylvatica;Cephalanthus Occidentalis;Shepherdia Canadensis;Melia Azedarach;Triadica Sebifera;Celtis Occidentalis;Ilex Aquifolium;Diospyros Virginiana;Purshia Glandulosa;Carpinus Betulus;Chrysolepis Chrysophylla;Gleditsia Triacanthos;Ostrya Virginiana;Cyrilla Racemiflora;Tsuga Diversifolia;Torreya Nucifera;Cercis Siliquastrum;Chamaecyparis Lawsoniana;Gordonia Lasianthus;Ungnadia Speciosa;Sophora Tomentosa;Vaccinium Uliginosum;Thuja Occidentalis;Schefflera Actinophylla;Maclura Pomifera;Melaleuca Quinquenervia;Asimina Triloba;Albizia Julibrissin;Paulownia Tomentosa;Rhus Glabra;Oxydendrum Arboreum;Myrica Cerifera;Notholithocarpus Densiflorus;Ailanthus Altissima;Corylus Colurna;Sapindus Saponaria;Morus Alba;Liriodendron Tulipifera;Taxus Baccata;"
+const _dataGenus 			= "Frangula;Echinodorus;Castanea;Platanus;Prunus;Casuarina;Taxodium;Abies;Phyllostachys;Musa;Tilia;Laurus;Robinia;Eucalyptus;Buxus;Phlebodium;Umbellularia;Calocedrus;Washingtonia;Sequoia;Juglans;Cocos;Crataegus;Sorbus;Aesculus;Phoenix;Chilopsis;Pseudotsuga;Fagus;Larix;Ficus;Ulmus;Fremontodendron;Cornus;Generic;Stump;Unknown;Sequoiadendron;Agave;Aralia;Philodendron;Cupressus;Convallaria;Pinus;Rhamnus;Sabal;Cercocarpus;Quercus;Acer;Picea;Citrus;Bulbophyllum;Ligustrum;Cordyline;Parkinsonia;Betula;Chamaedorea;Opuntia;Alnus;Carya;Rhododendron;Rosa;Aiphanes;Carnegiea;Sassafras;Pinus;Yucca;Amelanchier;Sansevieria;Magnolia;Spartium;Arbutus;Acer;Helianthus;Liquidambar;Acacia;Juniperus;Fraxinus;Quercus;Populus;Salix;Hamamelis;Prosopis;Sambucus;Schinus;Elaeagnus;Tamarix;Persea;Nyssa;Cephalanthus;Shepherdia;Melia;Triadica;Celtis;Ilex;Diospyros;Purshia;Carpinus;Chrysolepis;Gleditsia;Ostrya;Cyrilla;Tsuga;Torreya;Cercis;Chamaecyparis;Gordonia;Ungnadia;Sophora;Vaccinium;Thuja;Schefflera;Maclura;Melaleuca;Asimina;Albizia;Paulownia;Rhus;Oxydendrum;Myrica;Notholithocarpus;Ailanthus;Corylus;Sapindus;Morus;Liriodendron;Taxus;"
+const _dataSpecies 			= "Alnus;Bleheri;Dentata;Occidentalis;Armeniaca;Equisetifolia;Distichum;Balsamea;Aurea;Acuminata;Americana;Nobilis;Pseudoacacia;Globulus;Sempervirens;Aureum;Californica;Decurrens;Filifera;Sempervirens;Regia;Nucifera;Monogyna;Aria;Hippocastanum;Dactylifera;Linearis;Menziesii;Sylvatica;Decidua;Benjamina;Minor;Californicum;Florida;Dead;;;Giganteum;Stricta;Elata;Selloum;Leylandii;Majalis;Contorta;Alaternus;Mexicana;Montanus;Rubra;Platanoides;Abies;Sinensis;Phalaenopsis;Ovalifolium;Petiolaris;Aculeata;Papyrifera;Elegans;Aciculata;Rubra;Ovalis;Tsutsuji;Grandiflora;Horrida;Saguaro;Albidum;Sylvestris;Gloriosa;Canadensis;Trifasciata;Grandiflora;Junceum;Unedo;Saccharum;Annuus;Styraciflua;Tortilis;Occidentalis;Americana;Alba;Tremuloides;Alba;Virginiana;Nigra;Canadensis;Molle;Commutata;Aphylla;Americana;Sylvatica;Occidentalis;Canadensis;Azedarach;Sebifera;Occidentalis;Aquifolium;Virginiana;Glandulosa;Betulus;Chrysophylla;Triacanthos;Virginiana;Racemiflora;Diversifolia;Nucifera;Siliquastrum;Lawsoniana;Lasianthus;Speciosa;Tomentosa;Uliginosum;Occidentalis;Actinophylla;Pomifera;Quinquenervia;Triloba;Julibrissin;Tomentosa;Glabra;Arboreum;Cerifera;Densiflorus;Altissima;Colurna;Saponaria;Alba;Tulipifera;Baccata;"
+const _dataHeightMin		= "3;0.4;20;25;5;10;25;10;4;3.5;25;2;10;20;0.8;0.5;20;20;15;50;10;20;5;8;20;21;2;45;12;18;12;20;2;5;5;0.4;5;50;1;3;0.5;3;0.15;30;1;12;3;18;20;12;5;0.3;2;2;2;15;1;0.5;15;16;0.5;0.5;3;3;10;20;0.9;3;0.5;15;2;5;15;1.5;10;5;4;10;14;12;12;2;10;2;10;1;12;10;20;2;1;4;8;7;10;2;1;15;20;20;14;3;15;10;6;20;10;2;1;0.5;10;3;3;10;8;5;10;1;10;3;20;10;15;2;10;18;10;"
+const _dataHeightMax 		= "7;1;30;40;10;21;40;20;8;6;35;6;28;30;1.2;1.5;30;30;20;80;25;30;14;15;35;23;6;75;25;40;31;26;4;10;35;1;35;80;2.5;7;2;8;0.3;50;5;19;4;35;30;26;13;1;4;4;8;23;3;1.1;24;30;2;1.5;10;9;18;35;2.5;5;1.1;25;4;10;35;3;16;19;15;26;28;20;22;4.5;20;4;15;3;18;20;25;4;4;12;12;13;15;4;3;25;30;30;18;5;25;20;10;40;20;4;3;1.5;20;15;7;20;12;12;25;4;20;5;25;15;25;6;14;32;20;"
+const _dataHeightAvg 		= "6.26;0.92;21.91;28.51;9.09;20.08;28.9;13.45;4.34;4.82;30.22;4.23;27.25;24.8;1.09;0.94;27.12;20.95;18.05;75.66;10.16;22.15;5.98;8.86;20.38;21.65;5.98;65.51;24.15;18.27;30.43;24.17;2.09;5.71;22.26;0.6;18.67;62.23;2.12;6.49;1.57;7.26;0.24;42.55;4.09;18.58;3.97;20.39;20.83;25.94;5.94;0.71;3.06;3.88;7.67;22.07;2.83;1.01;23.2;16.9;0.85;1.21;9.86;7;15.48;27.15;2.47;4.68;1.02;20;3.27;7.33;15.51;2.32;14.73;18.4;10.49;25.49;27.37;18.36;21.72;4.07;15;3;12;2;15;15;22;3;2.5;8;10;10;15;3;2;20;25;25;16;4;20;15;8;30;15;3;2;1;15;10;5;15;10;8.5;17;2;15;4;22.5;12.5;20;4;12;24;15;"
+const _dataCrownHeightAvg	= "5.86;0.88;18.42;22.07;8.01;17.07;25.23;12.73;4.34;3.7;20.81;3.81;21.28;19.53;1;0.94;19.29;19.82;3.48;39.09;8.78;10.37;5.98;7.11;17.57;7.17;4.92;46.55;19.77;14.73;28.55;20.08;2.09;5.22;18.25;0.6;13.7;47.01;2.12;4.83;1.57;6.81;0.12;34.06;3.92;5.82;3.51;17.22;17.18;24.24;3.94;0.26;3.06;3.1;5.3;17.96;2.55;1.01;18.02;15.14;0.62;1.07;4.97;4.06;13.99;16.56;2.47;4.68;1.02;18.19;3.27;6.35;14.69;0.53;12.23;13.13;9.48;20.76;23.09;15.15;19.29;3.9;8.85;2.37;8.64;2;8.85;11.25;19.58;3;2.5;5.52;6.6;7.8;13.05;2.25;2;15.6;19.75;18.25;13.44;4;17;12.75;6.08;25.5;11.85;3;2;1;14.55;6.9;3.75;10.8;7.9;6.04;13.43;2;10.35;3.4;17.1;11.12;15.6;2.64;10.08;20.16;14.55;"
+const _dataRadiusAvg 		= "2.08;0.55;9.3;8.94;4.16;4.02;6.07;4.06;1.19;1.93;8.92;0.65;8.99;6.92;0.42;0.92;9.43;3.85;3.24;7.93;5.46;5.82;2.89;2.87;6.49;5.07;2.71;6.65;7.63;3.66;16.89;9.85;1.27;3.04;6.83;0.3;5.36;12.96;0.4;3.06;0.99;1.03;0.06;6.2;1.46;3.34;1.49;8.8;6.64;7.19;2.22;0.2;0.58;0.94;4.77;4.76;0.87;0.31;4.24;4.82;0.51;0.56;2.99;1.08;4.17;4.58;0.55;2.64;0.23;6.85;2.4;3.5;5.59;0.32;3.97;16.42;2.57;9.32;11.79;4.25;9.4;1.79;6.47;0.92;3.98;0.4;6.47;4.33;4.74;0.66;0.83;2.15;3;2.18;2.72;0.87;1.14;4.36;11.26;8.51;6.11;1.58;3.78;2.84;2.88;6.57;4.6;0.99;1.41;0.22;1.91;2.68;1.44;4.26;3;2.72;7.65;0.66;4.03;2.29;8.11;2.69;4.56;2.16;4.33;9.17;1.91;"
+const _dataCrownShape 		= "S4;S4;S5;S4;S5;S7;S7;S8;S1;S2;S4;S7;S5;S6;S5;S6;S4;S7;S6;S2;S5;S4;S4;S5;S5;S4;S5;S3;S6;S7;S5;S4;S5;S5;S5;S1;S5;S7;S5;S4;S6;S5;S6;S7;S4;S4;S5;S5;S5;S8;S4;S2;S5;S2;S6;S2;S2;S2;S5;S4;S5;S4;S4;S2;S6;S6;S7;S5;S1;S5;S5;S4;S5;S4;S6;S7;S7;S5;S5;S2;S4;S4;S5;S5;S6;S7;S5;S4;S5;S7;S5;S4;S4;S5;S5;S4;S4;S5;S4;S4;S4;S6;S5;S5;S4;S6;S5;S5;S6;S7;S3;S4;S4;S4;S4;S5;S4;S5;S4;S4;S4;S5;S5;S5;S4;S4;S3;"
+const _dataTrunkRadiusAvg 	= "0.06;0.04;0.61;0.71;0.15;0.15;0.46;0.13;0;0.09;0.45;0.04;0.39;0.32;0.02;0;0.85;0.28;0.3;1.26;0.2;0.37;0;0.16;0.36;0.4;0.08;0.57;0.78;0.19;0.88;0.55;0;0.12;0.55;0;0.49;1.11;0;0.13;0;0.11;0.01;0.54;0.02;0.3;0.25;0.32;0.3;0.41;0.15;0.01;0;0.18;0.15;0.35;0.12;0;0.31;0.3;0.05;0.02;0.2;0.37;0.17;0.38;0;0;0;0.35;0;0.15;0.3;0.03;0.26;0.49;0.34;0.47;0.45;0.31;0.57;0.18;0.51;0.06;0.18;0.07;0.51;0.23;0.29;0.1;0.08;0.11;0.15;0.16;0.22;0.05;0.09;0.33;0.61;0.7;0.38;0.13;0.28;0.21;0.2;0.64;0.32;0.1;0.2;0.03;0.26;0.13;0.08;0.38;0.2;0.26;0.41;0.07;0.2;0.08;0.57;0.17;0.29;0.09;0.32;0.58;0.26;"
+const _dataCategory			= "Broadleaf;Aquatic;Broadleaf;Broadleaf;Broadleaf;Broadleaf;Conifer;Conifer;Shrub;Perennial;Broadleaf;Shrub;Broadleaf;Broadleaf;Shrub;Perennial;Broadleaf;Conifer;Palm;Conifer;Broadleaf;Palm;Shrub;Broadleaf;Broadleaf;Palm;Shrub;Conifer;Broadleaf;Conifer;Broadleaf;Broadleaf;Shrub;Shrub;Broadleaf;Broadleaf;Broadleaf;Conifer;Succulent;Broadleaf;Climber;Conifer;Perennial;Conifer;Shrub;Palm;Shrub;Broadleaf;Broadleaf;Conifer;Broadleaf;Perennial;Shrub;Shrub;Shrub;Broadleaf;Palm;Succulent;Broadleaf;Broadleaf;Shrub;Shrub;Palm;Succulent;Broadleaf;Conifer;Succulent;Shrub;Succulent;Broadleaf;Shrub;Broadleaf;Broadleaf;Perennial;Broadleaf;Broadleaf;Conifer;Broadleaf;Broadleaf;Broadleaf;Broadleaf;Broadleaf;Broadleaf;Shrub;Broadleaf;Shrub;Broadleaf;Broadleaf;Broadleaf;Shrub;Shrub;Broadleaf;Broadleaf;Broadleaf;Broadleaf;Broadleaf;Shrub;Broadleaf;Broadleaf;Broadleaf;Broadleaf;Shrub;Conifer;Conifer;Broadleaf;Conifer;Broadleaf;Shrub;Shrub;Shrub;Conifer;Broadleaf;Broadleaf;Broadleaf;Broadleaf;Broadleaf;Broadleaf;Shrub;Broadleaf;Shrub;Broadleaf;Broadleaf;Broadleaf;Broadleaf;Broadleaf;Broadleaf;Conifer;"
+const _dataContinents 		= "AF,AS,EU,NA;AF,AS,EU,NA,OC,SA;AF,EU,NA,OC;AS,EU,NA,OC;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;EU,NA,OC,SA;AS,EU,NA;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;EU,NA;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;NA;NA;EU,NA,OC,SA;NA;AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;AS,EU,NA,OC;AS,EU,NA;AF,AS,EU,NA;AF,EU,NA,SA;AS,EU,NA,OC;EU,NA,OC,SA;EU,NA,OC;AF,AS,EU,NA,OC,SA;AS,EU,NA;AF,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;NA;AF,EU,NA,OC,SA;AS,EU,NA,OC;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;AS,EU,NA;NA;EU,NA,OC;NA,SA;NA;AF,AS,EU,NA,OC,SA;AS,EU,NA;EU,NA;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;OC;EU,NA,OC,SA;EU,NA;AF,AS,EU,NA,OC,SA;NA,SA;EU,NA;EU,NA;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;NA,SA;EU,NA,OC;AS,EU,NA;AF,AS,EU,NA,OC,SA;EU,NA;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC;AF,AS,EU,NA,SA;AF,AS,EU,NA,OC;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC,SA;AF,AS,NA;NA;AF,AS,EU,NA,OC,SA;AF,AS,EU,NA,OC;EU,NA,OC;AF,AS,EU,NA;AF,AS,EU,NA,OC,SA;SA;NA;SA;NA;AF,OC,AS;NA;NA;NA;NA;OC;AS,NA;NA;EU,AF,AS;NA,EU;NA;EU;NA;AS,NA;EU,NA;NA,SA;AS,NA;AS;EU,AS;NA;NA,AS;NA;AS,NA;NA;NA;OC;NA,AS;OC;NA;AS;AS;NA;NA;NA;NA;AS,NA;AS;NA;NA;NA,AS;EU,AF,AS;"
+const _dataZoneMin			= "2;9;4;4;5;9;4;3;6;10;3;8;4;8;5;9;7;5;8;7;7;10;4;5;3;8;7;4;4;2;10;5;8;5;1;1;1;6;5;4;9;6;3;4;8;8;6;4;3;2;9;10;5;9;8;2;10;8;6;4;5;5;10;8;4;3;6;4;10;7;8;6;3;2;5;9;4;3;3;1;2;3;9;4;8;2;7;9;4;4;2;7;8;3;5;4;3;5;6;4;3;5;6;6;6;5;8;7;9;2;2;9;4;9;5;6;6;3;5;7;7;5;4;7;4;4;5;"
+const _dataZoneMax			= "8;13;8;9;7;12;9;5;10;11;8;10;9;10;8;11;9;8;11;9;10;12;7;8;7;11;9;6;7;6;12;9;10;9;13;13;13;8;10;8;11;10;8;8;9;11;9;8;7;8;11;12;8;11;11;7;11;11;8;9;8;9;11;11;9;7;10;8;12;9;10;9;8;11;9;11;8;9;9;6;8;8;9;9;11;6;10;10;9;10;6;9;10;9;9;9;9;7;9;8;9;10;9;10;9;7;9;9;11;6;8;11;9;11;8;9;9;9;8;10;11;8;7;10;9;9;8;"
+const _dataProxy			= ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;Northern Red Oak;Common Hawthorn;White Willow;Flannelbush;Northern Red Oak;Apricot;White Ash;Flannelbush;Spanish Broom;Black Locust;Common Whitebeam;Sassafras;White Poplar;Apricot;Rose;Sassafras;White Oak;Sugar Maple;Southern Magnolia;Mountain Mahogany;Norway Spruce;Norway Spruce;European Beech;Australian Pine;Common Hawthorn;Spanish Broom;Lacy Tree Philodendron;Flannelbush;Leyland Cypress;Black Locust;Apricot;Blue Gum Eucalyptus;Ficus;Flowering Dogwood;White Oak;Spanish Broom;Black Locust;Witch Hazel;European Beech;White Ash;Basswood;Palo Verde;Red Hickory;Southern Magnolia;Leyland Cypress;"
+
+# getting index for accessors either via common 
+_indexFromCommonName(commonName) 	= _indexCheck(listIndex(_dataCommonName,commonName))
+_indexCheck(idx)					= case idx < 0: _fallbackIdx else: idx		# fallback if plant has not been found	
+
+# getting index via latin name: in case plant cannot be found, we try to search a plant of at least the given genus as first fallback
+_indexFromLatinName(genus,species)	= _indexCheckLatin(listIndex(_dataLatinName,genus+" "+species),genus)	
+_indexCheckLatin(idx,genus)			= case idx < 0: _indexCheck(listIndex(_dataGenus,genus)) else: idx 
+
+# this plantNbr is displayed if the user-selected plant does not exist in library
+const _fallbackIdx	= listIndex(_dataCommonName,FallbackPlant)
+
+# accessors
+_commonName(idx)	= listItem(_dataCommonName,idx)
+_latinName(idx)		= listItem(_dataLatinName,idx)
+_genus(idx)			= listItem(_dataGenus,idx)				
+_species(idx)		= listItem(_dataSpecies,idx)				
+_heightMax(idx)		= float(listItem(_dataHeightMax,idx))
+_heightMin(idx)		= float(listItem(_dataHeightMin,idx))
+_heightAvg(idx)		= case _valid(idx): float(listItem(_dataHeightAvg,idx)) else: 1	# to avoid divisions by zero
+_crownHeightAvg(idx)= float(listItem(_dataCrownHeightAvg,idx))
+_radiusAvg(idx)		= case _valid(idx): float(listItem(_dataRadiusAvg,idx)) else: 1	# to avoid divisions by zero
+_trunkRadiusAvg(idx)= float(listItem(_dataTrunkRadiusAvg,idx))
+_crownShape(idx)	= listItem(_dataCrownShape,idx)
+_category(idx)		= listItem(_dataCategory,idx)
+_continents(idx)	= listItem(_dataContinents,idx)
+_zoneMin(idx)		= float(listItem(_dataZoneMin,idx))
+_zoneMax(idx)		= float(listItem(_dataZoneMax,idx))
+_proxy(idx)			= listItem(_dataProxy,idx)
+
+# special accessors: randomHeight
+_randomHeight(idx) 	= case p(RandomHeightYoungPercentage): _randomHeightYoung(_heightMin(idx))
+					  else 								 : _randomHeightMature(_heightMin(idx),_heightMax(idx))
+_randomHeightYoung(hMin)		= rand(hMin/2,hMin)	
+_randomHeightMature(hMin,hMax) 	= rand(hMin,hMax)
+
+# special accessors: getting plant attributes for given height or radius
+_radius(idx,height)			= _radiusAvg(idx) * height/_heightAvg(idx)	
+_randomRadius(idx,height)	= _radius(idx,height) * rand(1-RandomRadiusDeviation,1+RandomRadiusDeviation)		
+_crownHeight(idx,height)	= _crownHeightAvg(idx) * height/_heightAvg(idx)
+_trunkRadius(idx,radius)	= _trunkRadiusAvg(idx) * radius/_trunkRadiusAvg(idx)
+
+# helper
+_valid(idx)					= 0 <= idx && idx < nPlants
+
+
+
+######################################################
+# Internal functions for rules only
+#
+
+# for higher performance (i.e. plant index for getting radius/height/radius can be stored to avoid multiple index lookups via name)
+@Hidden 
+attr _plantNbr 		= 0
+@Hidden
+attr _modelNbr		= 0
+@Hidden 
+attr _plantName 	= ""
+@Hidden 
+attr _plantHeight 	= 0
+@Hidden 
+attr _plantRadius 	= 0
+
+# validate name (assumes that _plantNbr has been set)
+_validate(name)	= case _plantNbr==_fallbackIdx: FallbackPlant else: name
+
+# file handling (assumes that Name and _plantNbr is correctly set)
+_getAsset = 
+	case _plantNbr < nModels: _getFilepath(replace(_latinName(_plantNbr)," ",""))
+	else					: _getFilepath(replace(_latinName(_indexFromCommonName(_proxy(_plantNbr)))," ",""))
+_getFilepath(latinNameNoSpaces)	=
+	AssetFolder + "/" + _getRepresentationFolder + "/" + latinNameNoSpaces + ".glb" 
+_getRepresentationFolder		=		# folder containing assets
+	case Representation=="Realistic": 	Representation
+	case Representation=="Fan": 		Representation
+	else: 								"Schematic"	
+
+# asset scale handling (assumes that Height, Radius, _plantNbr, _modelNbr have been set and the asset has been inserted)
+# assumes that inserted asset has heightAvg and radiusAvg of species (if has proxy, then asset has dims of representative species)
+_getModelNbr 		= case _plantNbr < nModels: _plantNbr else: _indexFromCommonName(_proxy(_plantNbr))
+_getScaleY			= _plantHeight/_heightAvg(_modelNbr)
+_getScaleXZ			= 
+	case _plantRadius > 0 : _plantRadius/_radiusAvg(_modelNbr)
+	else		    	  : _plantHeight/_heightAvg(_modelNbr) * rand(1-RandomRadiusDeviation,1+RandomRadiusDeviation)		# in case the Radius is zero, we assume the (most typical) random case. This is for performance reasons only --> see also alternative plant loader rule which uses this as marker (to save above lookups which are not needed if the user-set Radius has not been set)
+
+# rule helpers
+_roundTransparency	= rint(20*Transparency) / 20			# round to 0.05 steps (to avoid the creation of too many materials) 
+_randomRotation 	= case RandomRotation: rand(0,360) else: 0
+
+
+
+
+
+########################################################################
+########################################################################
+###
+###   RULES
+###
+###
+
+
+
+######################################################
+# Plant Loader 
+#
+
+@StartRule # assumes that all main attributes have been set outside
+Generate --> 
+	case Height > 0:
+		set(_plantNbr,_indexFromCommonName(Name))
+		set(_modelNbr, _getModelNbr)
+		set(_plantName,_validate(Name))
+		set(_plantHeight,Height)
+		set(_plantRadius,Radius)
+		s(0,0,0) center(xyz) 
+		alignScopeToAxes(world.y)
+		TrunkOrigin
+	else:
+		Generate(Name)
+	
+TrunkOrigin -->
+	case Representation == "Realistic":
+		PlantModel
+	case Representation == "Fan":
+		PlantModel
+	else:
+		PlantSchematic
+
+
+
+######################################################
+# Alternative Plant Loader (doesn't use the main attributes!)
+#
+# In the most typical design use case where a random-sized plant needs to 
+# be set, we recommend to use this rule in the importing rule file. 
+# 
+# On the one hand it is more practical since the attributes do not need to be
+# set before calling it as in the Plant rule above. But the main reason why 
+# we are provding this rule is that it is faster (because less library lookups
+# are required here).
+
+Generate(name) -->
+	set(_plantNbr,_indexFromCommonName(name))
+	set(_modelNbr, _getModelNbr)
+	set(_plantName,_validate(name))
+	set(_plantHeight,_randomHeight(_plantNbr))
+	set(_plantRadius,0)	# marks that the random radius can be used
+	s(0,0,0) center(xyz) alignScopeToAxes(world.y)
+	TrunkOrigin
+
+
+
+######################################################
+# Realistic Model (and Fan Model)
+# 
+	
+PlantModel -->
+	PlantModel(_getAsset)
+
+PlantModel(asset) -->							# needs special treatment because the bbox of the asset is not centered in orgin:
+	i(asset)
+	PlantModel(_getScaleY,_getScaleXZ,
+			   assetInfo(asset,tx)/scope.sx,	# relative origin offset in x-dir (trunk is at origin i.e. this value is needed for scaling around origin)
+			   assetInfo(asset,ty)/scope.sy,	# relative origin offset in y-dir (trunk is at origin i.e. this value is needed for scaling around origin)
+			   assetInfo(asset,tz)/scope.sz)   	# relative origin offset in z-dir (trunk is at origin i.e. this value is needed for scaling around origin)
+			   	
+PlantModel(scaleY,scaleXZ,relOffsetX,relOffsetY,relOffsetZ) -->		
+	t('-relOffsetX,'-relOffsetY,'-relOffsetZ)
+	r(0,_randomRotation,0)
+	s('scaleXZ,'scaleY,'scaleXZ)				# scale standard model to meet the user-given Height and Radius 
+	t('relOffsetX,'relOffsetY,'relOffsetZ)
+	PlantVisualization
+	
+
+
+######################################################
+# Schematic Model
+#
+	
+PlantSchematic -->	
+	i(_getAsset) 
+	PlantSchematic(_getScaleY,_getScaleXZ)
+	
+PlantSchematic(scaleY,scaleXZ) -->
+	s('scaleXZ,'scaleY,'scaleXZ) center(xz)
+	PlantVisualization
+
+
+
+######################################################
+# Post operations
+#
+
+PlantVisualization -->
+	case OverwriteColor != "" && _roundTransparency > 0.01:
+		set(material.opacity,1-_roundTransparency)	
+		set(material.colormap,"")
+		color(OverwriteColor)
+		PlantReporting
+	case OverwriteColor != "":
+		set(material.colormap,"")
+		color(OverwriteColor)
+		PlantReporting
+	case _roundTransparency > 0.01:
+		set(material.opacity,1-_roundTransparency)	
+		PlantReporting
+	case RandomBrightness:
+		color(40%: "#ffffff" 33%: "#dddddd" else: "#bbbbbb")	# variation in brightness for better looks (but triples the instance count...)
+		PlantReporting		
+	else:
+		PlantReporting
+				
+PlantReporting -->
+	case Reporting == "Metadata":
+		report( "Common Name", 				_plantName								)
+		report( "Genus", 					_genus(_plantNbr)						)
+		report( "Species", 					_species(_plantNbr)						)
+		report( "Total Height", 			_plantHeight							)
+		report( "Crown Height", 			_crownHeight(_plantNbr,_plantHeight)	)
+		report( "Trunk Radius", 			_trunkRadius(_plantNbr,_plantRadius)	)
+		report( "Crown Radius", 			_plantRadius							)
+		report( "Crown Shape", 				_crownShape(_plantNbr)					)
+		report( "Minimum Height of Species",_heightMin(_plantNbr)					)
+		report( "Maximum Height of Species",_heightMax(_plantNbr)					)
+		report( "Hardiness Zone Min", 		_zoneMin(_plantNbr)						)
+		report( "Hardiness Zone Max", 		_zoneMax(_plantNbr)						)
+		report( "Continents of Species", 	_continents(_plantNbr)					)
+		PlantFinal.
+	case Reporting == "Instance Information":
+		PlantFinal.
+		report("asset",						_getAsset								)
+		report("scale", 					scope.sy								)
+		# report position in world coords
+		s(0.001,'1,0.001) center(xz)	 
+		report("xpos", 						convert(x,scope,world,pos,0,0,0)		)
+		report("ypos", 						convert(y,scope,world,pos,0,0,0)		)
+		report("zpos", 						convert(z,scope,world,pos,0,0,0)		)
+		# report rotation in world coords 
+		report("xrot", 						-(convert(x,scope,world,orient,0,0,0))	)
+		report("yrot", 						-(convert(y,scope,world,orient,0,0,0))	)
+		report("zrot", 						convert(z,scope,world,orient,0,0,0)		)
+	else:
+		PlantFinal.
+
+
+
+
+
+

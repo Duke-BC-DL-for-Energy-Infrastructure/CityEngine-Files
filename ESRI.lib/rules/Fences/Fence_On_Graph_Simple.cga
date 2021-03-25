@@ -1,0 +1,331 @@
+/**
+ * File:    Fence_On_Graph_Simple.cga
+ * Created: 11 Jun 2018 14:51:14 GMT
+ * Author:  Esri R&D Center Zurich
+ */
+
+version "2019.1"
+
+
+/*
+
+Input shape:  street shape (shape with UVs), street width >= base_depth
+
+Fences are created along the u direction of the street shape.
+  
+*/
+
+
+// ------------------------------
+// Attributes
+// ------------------------------
+
+// Fence Direction
+
+@Group("Fence", "Direction", 0)
+
+@Order(1)
+@Enum("AS_IS", "REVERSED") 
+@Description("inner and outer sides of fence are given by the direction of the street and can be flipped with this attribute")
+attr reverseDirection = "AS_IS"
+
+// ------------------------------
+
+// Fence Post
+@Group("Fence", "Post", 1)
+
+@Order(1)
+@File
+@Description("replace post with asset")
+attr post_asset = ""
+
+@Order(2)
+@Handle(shape=Post*, axis=x, repeat=none, slip=inside, reference=center, occlusion=false)
+@Distance
+@Description("post width (and depth)")
+attr post_width = 0.2
+
+@Order(3)
+@Handle(shape=Post*, axis=y, repeat=none, slip=inside, reference=center, occlusion=false)
+@Distance
+@Description("post height")
+attr post_height = 1.2
+
+// ------------------------------
+
+// Fence Middle
+@Group("Fence", "Middle", 2)
+
+@Order(1)
+@Description("fence has middle or not")
+attr hasMiddle = false
+
+@Order(2)
+@File
+@Description("replace middle with asset")
+attr middle_asset = ""
+
+@Order(3)
+@Handle(shape=Handle_Middle, axis=x, repeat=none, slip=inside, reference=center, occlusion=false)
+@Distance
+@Description("approximate width of middle part of fence between posts")
+attr middle_width = 2.5
+
+// ------------------------------
+
+// Horizontal Bars
+@Group("Fence", "Horizontal Bars", 3)
+
+@Order(1)
+@Description("fence has horizontal bars")
+attr hasHorizBars = true
+
+@Order(2)
+@File
+@Description("replace horizontal bar with asset")
+attr horizBar_asset = ""
+
+@Order(3)
+@Distance
+@Description("height of single horizontal bar")
+attr horizBar_height = 0.11
+
+@Order(4)
+@Distance
+@Description("spacing between horizontal bars (invalid if horizBarPositions has values)")
+attr horizBar_spacing = 0.3
+
+// ------------------------------
+
+// Vertical Bars
+@Group("Fence", "Vertical Bars", 4)
+
+@Order(1)
+@Description("fence has vertical bars")
+attr hasVertBars = true
+
+@Order(2)
+@File
+@Description("replace vertical bar with asset")
+attr vertBar_asset = ""
+
+@Order(3)
+@Distance
+@Description("width of single vertical bar")
+attr vertBar_width = 0.07
+
+@Order(4)
+@Distance
+@Description("spacing between vertical bars")
+attr vertBar_spacing = 0.07
+
+// ------------------------------
+
+@Group("Colors", 5)
+
+@Order(1)
+@Color
+@Description("main post color")
+attr post_color = "#FFFFFF"
+
+@Order(2)
+@Color
+@Description("color of solid middle section")
+attr middle_color = "#FFFFFF"
+
+@Order(3)
+@Color
+@Description("horizontal bar color")
+attr horizBar_color = "#FFFFFF"
+
+@Order(4)
+@Color
+@Description("vertical bar color")
+attr vertBar_color = "#FFFFFF"
+
+// ------------------------------
+
+// read from obj attributes (for streets only)
+@Hidden
+attr connectionEnd = ""
+
+// create end post for segments at end of street
+// also, for polygons, always create space, set to 1
+@Hidden
+attr createEndPost =
+	case connectionEnd == "ROUNDABOUT"
+		 || connectionEnd == "DEAD_END"
+		 || connectionEnd == "JUNCTION_ENTRY"
+		 || connectionEnd == "JUNCTION" :
+		1
+	else :
+		0
+
+// leave space for end post but do not create it (for polygon)
+@Hidden
+attr nilEndPost = false
+
+
+// ------------------------------
+// Other Variables and Functions
+// ------------------------------
+
+// fence dimensions
+const fence_height = post_height
+const fence_depth = post_width
+const middle_depth = 0.4*fence_depth
+const middle_height = 0.9*post_height
+
+// number of horizontal bars and adjusted spacing
+const nHorizBars = 
+	case horizBar_height > 0:
+		rint((middle_height - horizBar_spacing)/(horizBar_height + horizBar_spacing))
+	else:
+		0
+const horizBar_adjustedSpacing = (middle_height - nHorizBars*horizBar_height)/(nHorizBars + 1)
+
+
+// ------------------------------
+// Start Rule
+// ------------------------------
+
+// fence on graph
+@StartRule
+Generate -->
+	split(u, uvSpace, 0) { -geometry.uMin: NIL
+						 | ~1: split(v, unitSpace, 0) { ~1: NIL
+						   							  | fence_depth: Footprint
+						   							  | ~1: NIL }
+
+						 | geometry.uMax-1: NIL }
+
+			
+// ------------------------------
+// Fence Footprints
+// ------------------------------
+
+// footprint under fence, split into posts and middles
+Footprint -->
+	case reverseDirection == "REVERSED":
+		rotateUV(0, 180)
+		SplitFootprint
+	else:
+		SplitFootprint
+		
+SplitFootprint -->
+	case middle_width == 0:
+		split(u, unitSpace, 0) { ~post_width: PostFootprint }*
+	else:
+		split(u, unitSpace, 0) { { post_width: PostFootprint
+		 						 | ~middle_width: split(v, unitSpace, 0) { ~1: NIL
+		 						 						   			   	 | middle_depth: MiddleFootprint
+		 						 						   			   	 | ~1: NIL } }*
+							   | post_width*createEndPost: EndPostFootprint }
+	
+PostFootprint -->
+	alignScopeToGeometry(yUp, 0, 0)
+	Post
+	
+// nil end post?  (for polygons)
+EndPostFootprint -->
+	case nilEndPost:
+		NIL
+	else:
+		PostFootprint
+	
+// footprint of middle part of fence between posts
+MiddleFootprint -->
+	translate(rel, world, 0, 0.5*(post_height - middle_height), 0)
+	normalizeUV(0, uv, collectiveAllFaces)
+	MiddleSolid
+	VerticalBars
+	HorizontalBars
+	alignScopeToGeometry(yUp, 0, 0)
+	extrude(world.up, middle_height)
+	Handle_Middle
+	
+Handle_Middle --> NIL
+
+
+// ------------------------------
+// Fence Parts
+// ------------------------------
+
+Post -->
+	case post_asset == "":
+		extrude(world.up, post_height)
+		color(post_color)
+	else:
+		normalizeUV(0, uv, collectiveAllFaces)
+		alignScopeToAxes(y)
+		insertAlongUV(0, post_asset, post_height)
+
+MiddleSolid -->
+	case hasMiddle:
+		case middle_asset == "":
+			extrude(world.up, middle_height)
+			color(middle_color)
+		else:
+			alignScopeToAxes(y)
+			insertAlongUV(0, middle_asset, middle_height)
+	else:
+		NIL
+
+HorizontalBars -->
+	case hasHorizBars:
+		case hasVertBars:
+			split(v, unitSpace, 0) { ~1: NIL
+								   | 0.5*middle_depth: HorizontalBars_DepthSet }
+		else:
+			HorizontalBars_DepthSet
+	else:
+		NIL
+
+HorizontalBars_DepthSet -->
+	normalizeUV(0, v, collectiveAllFaces)
+	comp(f) { all: alignScopeToAxes(y)
+				   HorizontalBars_Recursive(0) }
+
+HorizontalBars_Recursive(ind) -->
+	case ind < nHorizBars:
+		t(0, horizBar_adjustedSpacing, 0)
+		HorizontalBar
+		t(0, horizBar_height, 0)
+		HorizontalBars_Recursive(ind + 1)
+	else:
+		NIL
+
+HorizontalBar -->
+	case horizBar_asset == "":
+		extrude(world.up, horizBar_height)
+		color(horizBar_color)
+	else:
+		insertAlongUV(0, horizBar_asset, horizBar_height)
+
+VerticalBars -->
+	case hasVertBars:
+		case hasHorizBars:
+			split(v, unitSpace, 0) { 0.5*middle_depth: VerticalBars_DepthSet
+								   | ~1: NIL }
+		else:
+			VerticalBars_DepthSet
+	else:
+		NIL
+
+VerticalBars_DepthSet -->
+	split(u, unitSpace, 0) { { ~vertBar_spacing: NIL
+							 | vertBar_width: VerticalBar }*
+						   | ~vertBar_spacing: NIL }
+	
+VerticalBar -->
+	case vertBar_asset == "":
+		extrude(world.up, middle_height)
+		color(vertBar_color)
+	else:
+		normalizeUV(0, uv, collectiveAllFaces)
+		alignScopeToAxes(y)
+		insertAlongUV(0, vertBar_asset, middle_height)
+		
+
+
+	

@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workbench progressCount="26" version="2.0">
+<workbenchAdvisor/>
+<window height="1080" width="1920" x="0" y="0">
+<fastViewData fastViewLocation="1024"/>
+<perspectiveBar/>
+<coolbarLayout>
+<coolItem itemType="typeToolBarContribution" x="-1" y="-1"/>
+<coolItem id="additions" itemType="typeSeparator"/>
+<coolItem id="org.eclipse.debug.ui.launch.toolbar" itemType="typeToolBarContribution" x="-1" y="-1"/>
+<coolItem id="org.eclipse.debug.ui.main.toolbar" itemType="typeToolBarContribution" x="-1" y="-1"/>
+<coolItem id="com.procedural.ceui.selectToolbar" itemType="typeToolBarContribution" x="64" y="38"/>
+<coolItem id="com.procedural.ceui.navToolsToolbar" itemType="typeToolBarContribution" x="220" y="38"/>
+<coolItem id="com.procedural.ceui.moveToolsToolbar" itemType="typeToolBarContribution" x="393" y="38"/>
+<coolItem id="com.procedural.ceui.streetsToolbar" itemType="typeToolBarContribution" x="220" y="38"/>
+<coolItem id="com.procedural.ceui.shapesToolbar" itemType="typeToolBarContribution" x="337" y="38"/>
+<coolItem id="com.procedural.ceui.modelsToolbar" itemType="typeToolBarContribution" x="292" y="38"/>
+<coolItem id="com.esri.sketch.measToolsToolbar" itemType="typeToolBarContribution" x="220" y="38"/>
+<coolItem id="com.procedural.ceui.envToolbar" itemType="typeToolBarContribution" x="64" y="38"/>
+<coolItem id="com.esri.agol.connectionStatusButton" itemType="typeToolBarContribution" x="-1" y="-1"/>
+<coolItem id="org.eclipse.ui.edit.text.actionSet.annotationNavigation" itemType="typeToolBarContribution" x="-1" y="-1"/>
+<coolItem id="org.eclipse.ui.edit.text.actionSet.navigation" itemType="typeToolBarContribution" x="-1" y="-1"/>
+</coolbarLayout>
+<page focus="true" label="Workspace - Default Layout">
+<editors>
+<editorArea activeWorkbook="DefaultEditorWorkbook">
+<info part="DefaultEditorWorkbook">
+<folder appearance="1" expanded="2">
+<presentation id="com.procedural.ceui.presentation.CEPresentationFactory"/>
+</folder>
+</info>
+</editorArea>
+</editors>
+<views>
+<view id="org.corebounce.inspectors.view.inspector" partName="Inspector">
+<viewState/>
+</view>
+<view id="com.procedural.ceui.navigator" partName="Navigator">
+<properties>
+<property IMemento.internal.id="DIRTY_INDICATOR"></property>
+</properties>
+<viewState CommonNavigator.LINKING_ENABLED="0" org.eclipse.ui.navigator.resources.workingSets.showTopLevelWorkingSets="0">
+<scope id="local">
+<expanded IMemento.internal.id="C:/Users/Edward/Documents/CityEngine/Default Workspace/BC Updated Mar 22/ESRI.lib"/>
+</scope>
+</viewState>
+</view>
+<view id="com.procedural.cityengine.views.view.cE3D:0" partName="3D View">
+<properties>
+<property IMemento.internal.id="DIRTY_INDICATOR"></property>
+</properties>
+<viewState/>
+</view>
+</views>
+<perspectives activePart="com.procedural.ceui.navigator" activePerspective="com.procedural.cityengine.defaultPerspective">
+<perspective editorAreaTrimState="2" editorAreaVisible="1" fixed="0" version="0.016">
+<descriptor class="com.procedural.cityengine.DefaultPerspective" id="com.procedural.cityengine.defaultPerspective" label="Default Layout"/>
+<alwaysOnActionSet id="com.esri.dashboard.actions.NewDashboard2"/>
+<alwaysOnActionSet id="com.procedural.cityengine.facadewizard.actions.facadeView"/>
+<alwaysOnActionSet id="org.corebounce.actions.inspector"/>
+<alwaysOnActionSet id="org.eclipse.search.searchActionSet"/>
+<alwaysOnActionSet id="org.eclipse.ui.edit.text.actionSet.annotationNavigation"/>
+<alwaysOnActionSet id="org.eclipse.ui.edit.text.actionSet.navigation"/>
+<alwaysOnActionSet id="org.eclipse.ui.edit.text.actionSet.convertLineDelimitersTo"/>
+<alwaysOnActionSet id="org.eclipse.ui.actionSet.keyBindings"/>
+<alwaysOnActionSet id="org.eclipse.ui.actionSet.openFiles"/>
+<hide_toolbar_item_id id="org.eclipse.debug.ui.commands.RunToLine"/>
+<hide_toolbar_item_id id="org.eclipse.ui.edit.text.toggleShowSelectedElementOnly"/>
+<view id="org.corebounce.inspectors.view.inspector"/>
+<view id="com.procedural.cityengine.views.view.cE3D:0"/>
+<view id="com.procedural.ceui.navigator"/>
+<fastViewBars/>
+<layout>
+<mainWindow>
+<info part="org.eclipse.ui.editorss"/>
+<info folder="true" part="stickyFolderRight" ratio="0.749736" ratioLeft="1420" ratioRight="474" relationship="2" relative="org.eclipse.ui.editorss">
+<folder appearance="2" expanded="2">
+<page content="org.eclipse.help.ui.HelpView" label="LabelNotFound"/>
+<page content="org.eclipse.ui.internal.introview" label="LabelNotFound"/>
+</folder>
+</info>
+<info folder="true" part="com.procedural.cityengine.defaultPerspective..0" ratio="0.7719113" ratioLeft="1462" ratioRight="432" relationship="2" relative="org.eclipse.ui.editorss">
+<folder activePageID="org.corebounce.inspectors.view.inspector" appearance="2" expanded="2">
+<page content="org.corebounce.inspectors.view.inspector" label="Inspector"/>
+<presentation id="com.procedural.ceui.presentation.CEPresentationFactory">
+<part id="0"/>
+</presentation>
+</folder>
+</info>
+<info folder="true" part="com.procedural.cityengine.defaultPerspective..1" ratio="0.29411766" ratioLeft="430" ratioRight="1032" relationship="2" relative="org.eclipse.ui.editorss">
+<folder activePageID="com.procedural.cityengine.views.view.cE3D:0" appearance="2" expanded="2">
+<page content="com.procedural.cityengine.views.view.cE3D:0" label="3D View"/>
+<presentation id="com.procedural.ceui.presentation.CEPresentationFactory">
+<part id="0"/>
+</presentation>
+</folder>
+</info>
+<info folder="true" part="com.procedural.cityengine.defaultPerspective..2" ratio="0.32919255" ratioLeft="212" ratioRight="432" relationship="4" relative="org.eclipse.ui.editorss">
+<folder activePageID="com.procedural.ceui.navigator" appearance="2" expanded="2">
+<page content="com.procedural.ceui.navigator" label="Navigator"/>
+<presentation id="com.procedural.ceui.presentation.CEPresentationFactory">
+<part id="0"/>
+</presentation>
+</folder>
+</info>
+</mainWindow>
+</layout>
+</perspective>
+</perspectives>
+<workingSets/>
+<navigationHistory/>
+<input factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/" type="8"/>
+</page>
+<workbenchWindowAdvisor/>
+<actionBarAdvisor/>
+<trimLayout>
+<trimArea IMemento.internal.id="128">
+<trimItem IMemento.internal.id="org.eclipse.ui.internal.WorkbenchWindow.topBar"/>
+<trimItem IMemento.internal.id="1169933615"/>
+</trimArea>
+<trimArea IMemento.internal.id="1024">
+<trimItem IMemento.internal.id="1787450654"/>
+</trimArea>
+</trimLayout>
+</window>
+<mruList/>
+</workbench>

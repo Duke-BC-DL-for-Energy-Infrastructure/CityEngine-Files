@@ -1,0 +1,384 @@
+/**
+ * File:    Fence_On_Polygon.cga
+ * Created: 3 Dec 2015 10:26:09 GMT
+ * Author:  Esri R&D Center Zurich
+ */
+
+version "2019.1"
+
+
+/*
+
+Input shape:  polygon
+
+Fences are created along each edge of the input polygon.  Fences are centered (in z) on the edge, and
+fence posts occur on the polygon vertices.  Users can select which polygon sides have fences by
+choosing a selector (attr sideSelector) or by using local edits to set attr hasFence for each polygon
+side.  Occlusion testing occurs per polygon side.
+
+Notes on Occlusion Testing:
+
+* A fence on a polygon side is considered occluded if the query shape is inside something else.  In
+  this case, the fence on that polygon side will not be created.  The query shape is a vertical face
+  along the polygon side with the height of the fence.  
+  
+* The volume of the fence on a polygon side exists as an occluder.  The vertical plane in the middle of
+  the volume of the fence is a query shape.  Consider the case where there are two fences on the shared
+  edge between two lots/polygons.  If a fence's middle plane is inside the volume of the other fence,
+  then it is considered occluded and will not be created.  This means that if one fence is taller than
+  the other, the taller fence will be created (because its middle plane is not entirely inside the
+  shorter fence's volume), and the shorter fence will not be created (because its middle plane is
+  entirely inside the taller fence's volume).  If the fences are the same height, both fences will not
+  be created.
+  
+* Occlusion testing for a polygon side can be restricted to test within the specified occlusionTestSet
+  for the given occlusionTestLabel.
+
+* The last post of each polygon side is created only if it does not touch another polygon side.  Every
+  end post checks whether its footprint touches any shape using touches(intra).
+  
+* When a polygon side is occluded, it is not created.  However, the ghost shape for its volume is still
+  created.  This means that the neighbor before it will not create an end post, and it will look like
+  there is an end post missing.
+  
+Notes on Occlusion Labeling:
+
+* The volume of the fence on each polygon side is labeled with the occlusionLabel if one is given. This
+  labeled volume is meant to be an occluder when testing (in external code) if a query object
+  touches(), overlaps(), or is inside() of it.
+
+* The fence parts (post, middle, base post, base middle, upper post, upper middle) are also each
+  labeled with the given occlusionLabel in the fence_on_graph code.  These labeled parts are meant to
+  be occluders which can be found when testing (in external code) to see if a query object touches() or
+  overlaps() a fence part.
+  
+*/
+
+
+import Fence: "/ESRI.lib/rules/Fences/Fence_On_Graph.cga" (occlusionLabel=occlusionLabel)
+
+
+// ------------------------------
+// Attributes
+// ------------------------------
+
+@Group("Fences on Polygon Sides", 0)
+
+@Order(1)
+@Enum("all", "front", "back", "left", "right", "front and back", "left and right", "street.front", "street.back", "street.left", "street.right", "street.front and street.back", "street.left and street.right", "none")
+@Description("sides that should have fences")
+attr sideSelector = "all"
+
+@Order(2)
+@Handle(shape=PolygonSide_Volume, type=toggle, occlusion=false, repeat=none)
+@Description("set with local edits to remove fences on desired sides")
+attr hasFence = true
+
+// ------------------------------
+
+@Group("Occlusion Label", 1)
+
+@Order(1)
+@Description("label to give fence parts as occluders for occlusion testing")
+attr occlusionLabel = ""
+
+// ------------------------------
+
+@Group("Occlusion Testing", 2)
+
+@Order(1)
+@Enum("intra", "inter", "all", "none")
+@Description("occlusion test set")
+attr occlusionTestSet = "all"
+
+@Order(2)
+@Description("label to check during occlusion testing")
+attr occlusionTestLabel = ""
+
+
+// ------------------------------
+// Start Rule
+// ------------------------------
+
+// create fence on polygon edges
+@StartRule
+@InPolygon
+Generate -->
+	deleteUV(0)
+	extrude(world.up, Fence.fence_height)
+	SelectSides
+	
+	
+// ------------------------------
+// Select Sides and Occlusion
+// ------------------------------
+
+// put fences on selected sides
+SelectSides -->
+	case sideSelector=="front":
+		comp(f) { front: PolygonSide | all: NIL  }
+	case sideSelector=="back":
+		comp(f) { back: PolygonSide | all: NIL  }
+	case sideSelector=="left":
+		comp(f) { left: PolygonSide | all: NIL  }
+	case sideSelector=="right":
+		comp(f) { right: PolygonSide | all: NIL  }
+	case sideSelector=="front and back":
+		comp(f) { front: PolygonSide | back: PolygonSide | all: NIL  }
+	case sideSelector=="left and right":
+		comp(f) { left: PolygonSide | right: PolygonSide | all: NIL  }
+	case sideSelector=="street.front":
+		comp(f) { street.front: PolygonSide | all: NIL  }
+	case sideSelector=="street.back":
+		comp(f) { street.back: PolygonSide | all: NIL }
+	case sideSelector=="street.left":
+		comp(f) { street.left: PolygonSide | all: NIL  }
+	case sideSelector=="street.right":
+		comp(f) { street.right: PolygonSide | all: NIL  }
+	case sideSelector=="street.front and street.back":
+		comp(f) { street.front: PolygonSide | street.back: PolygonSide | all: NIL  }
+	case sideSelector=="street.left and street.right":
+		comp(f) { street.left: PolygonSide | street.right: PolygonSide | all: NIL  }
+	case sideSelector=="none":
+		NIL
+	else:
+		comp(f) { vertical: PolygonSide | all: NIL  }
+	
+// vertical polygon side with height of fence
+// test occlusion with other objects
+PolygonSide -->
+	case occlusionTestSet=="none":
+		PolygonSide_CreateVolume
+	case inside(sel(occlusionTestSet), occlusionTestLabel):
+		NIL
+	else:
+		PolygonSide_CreateVolume
+
+// create fence volume
+PolygonSide_CreateVolume -->
+	t(0, 0, 0.5*Fence.fence_depth)
+	s(scope.sx + Fence.fence_depth, '1, '1)
+	center(x)
+	extrude(-Fence.fence_depth)
+	PolygonSide_Volume
+	
+// create fence on side if it isn't removed by local edits
+PolygonSide_Volume -->
+	case hasFence:
+		PolygonSide_CreateGhost
+	else:
+		NIL
+	
+// create labeled occluder for fence volume
+PolygonSide_CreateGhost -->
+	case occlusionLabel=="":
+		PolygonSide_CreateFootprint
+	else:
+		label(occlusionLabel)
+		PolygonSide_CreateFootprint
+		
+// create footprint for polygon side
+PolygonSide_CreateFootprint -->
+	comp(f) { world.down: reverseNormals
+						  set(trim.vertical, false)
+					 	  Footprint }
+
+
+// ------------------------------
+// Fence Footprints
+// ------------------------------
+
+// fence footprint
+Footprint -->
+	alignScopeToGeometry(yUp, 0, 0)
+	BaseFootprint
+	translate(rel, world, 0, Fence.base_height, 0)
+	MainFootprint
+	translate(rel, world, 0, Fence.main_height, 0)
+	UpperFootprint
+	
+// footprint of base of fence
+BaseFootprint -->
+	case Fence.hasBase :
+		case Fence.createMain==1:
+			case Fence.base_depth > Fence.main_depth:
+				s(scope.sx - Fence.fence_depth + Fence.base_depth, '1, Fence.base_depth)
+				center(xz)
+				split(x) { Fence.base_depth*Fence.createPosts: alignScopeToAxes(y)
+										  					   Fence.BasePostFootprint
+						 | ~1: alignScopeToAxes(y)
+						 	   Fence.BaseMiddleFootprint
+						 | Fence.base_depth: alignScopeToAxes(y)
+						 				  	 EndPost("base") }
+			else :
+				s(scope.sx - Fence.fence_depth + Fence.main_depth, '1, Fence.main_depth)
+				center(xz)
+				split(x) { 0.5*(Fence.main_depth - Fence.post_depth)*Fence.createPosts: NIL
+						 | { Fence.post_width*Fence.createPosts: Post_Resize("base")
+						   | ~Fence.middle_width: Middle_Resize("base") }*
+						 | Fence.post_width*Fence.createPosts + (1-Fence.createPosts)*Fence.main_depth: EndPost_Resize("base")
+						 | 0.5*(Fence.main_depth - Fence.post_depth)*Fence.createPosts: NIL }
+		else:
+			split(x) { ~Fence.middle_width: alignScopeToAxes(y)
+										 	Fence.BaseMiddleFootprint }*
+			
+	else :
+		NIL	 
+
+// footprint of main part of fence
+MainFootprint -->
+	s(scope.sx - Fence.fence_depth + Fence.main_depth, '1, Fence.main_depth)
+	center(xz)
+	split(x) { 0.5*(Fence.main_depth - Fence.post_depth)*Fence.createPosts : NIL
+			 | { Fence.post_width*Fence.createPosts : s('1, '1, Fence.post_depth)
+								center(z)
+								alignScopeToAxes(y)
+								Fence.MainPostFootprint
+			   | ~Fence.middle_width : s('1, '1, Fence.middle_depth)
+			   					   center(z)
+			   					   alignScopeToAxes(y)
+			   					   Fence.MainMiddleFootprint }*
+			 | Fence.post_width*Fence.createPosts + (1-Fence.createPosts)*Fence.main_depth : s('1, '1, Fence.post_depth*Fence.createPosts + (1-Fence.createPosts)*Fence.main_depth)
+			 				  center(z)
+			 				  alignScopeToAxes(y)
+			 				  EndPost("main")
+			 | 0.5*(Fence.main_depth - Fence.post_depth)*Fence.createPosts : NIL }
+
+// footprint of upper part of fence
+UpperFootprint -->
+	case Fence.hasUpper :
+		case Fence.upper_depth > Fence.main_depth :
+			s(scope.sx - Fence.fence_depth + Fence.upper_depth, '1, Fence.upper_depth)
+			center(xz)
+			split(x) { 0.5*(Fence.upper_depth - Fence.upperPost_depth)*Fence.createPosts: NIL
+					 | Fence.upperPost_depth*Fence.createPosts : s('1,'1,Fence.upperPost_depth) center(z) alignScopeToAxes(y)
+									   Fence.UpperPostFootprint
+					 | ~1 : s('1, '1, Fence.upperMiddle_depth)
+					 		center(z)
+					 		alignScopeToAxes(y)
+					 		Fence.UpperMiddleFootprint
+					 | Fence.upperPost_depth*Fence.createPosts + (1-Fence.createPosts)*Fence.upper_depth : s('1,'1,Fence.upperPost_depth*Fence.createPosts + (1-Fence.createPosts)*Fence.upper_depth) center(z) alignScopeToAxes(y)
+					 				   EndPost("upper")
+					 | 0.5*(Fence.upper_depth - Fence.upperPost_depth)*Fence.createPosts: NIL }
+		else :
+			s(scope.sx - Fence.fence_depth + Fence.main_depth, '1, Fence.main_depth)
+			center(xz)
+			split(x) { 0.5*(Fence.main_depth - Fence.post_depth)*Fence.createPosts : NIL
+					 | { Fence.post_width*Fence.createPosts : Post_Resize("upper")
+					   | ~Fence.middle_width : Middle_Resize("upper") }*
+					 | Fence.post_width*Fence.createPosts + (1-Fence.createPosts)*Fence.main_depth : EndPost_Resize("upper")
+					 | 0.5*(Fence.main_depth - Fence.post_depth)*Fence.createPosts : NIL }
+	else :
+		NIL
+				 
+// resize footprint to upper or base post footprint
+// type 	["base", "upper"] base or upper part of fence
+Post_Resize(type) -->
+	case type == "base" :
+		s(Fence.base_depth, '1, Fence.base_depth)
+		center(xz)
+		alignScopeToAxes(y)
+		Fence.BasePostFootprint
+	else :
+		s(Fence.upperPost_depth, '1, Fence.upperPost_depth)
+		center(xz)
+		alignScopeToAxes(y)
+		Fence.UpperPostFootprint
+
+// resize footprint to upper or base end post footprint
+// type 	["base", "upper"] base or upper part of fence
+EndPost_Resize(type) -->
+	case type == "base" :
+		s(Fence.base_depth, '1, Fence.base_depth)
+		center(xz)
+		alignScopeToAxes(y)
+		EndPost("base")
+	else :
+		s(Fence.upperPost_depth, '1, Fence.upperPost_depth)
+		center(xz)
+		alignScopeToAxes(y)
+		EndPost("upper")
+
+// resize footprint to upper or base middle footprint
+// type 	["base", "upper"] base or upper part of fence
+Middle_Resize(type) -->
+	case type == "base" :
+		case Fence.hasPosts:
+			s(scope.sx + Fence.post_depth - Fence.base_depth, '1, Fence.base_depth)
+			center(xz)
+			alignScopeToAxes(y)
+			Fence.BaseMiddleFootprint
+		else:
+			case split.index==0 && split.index==split.total-2:
+				s('1, '1, Fence.base_depth)
+				t(0.5*(Fence.main_depth - Fence.base_depth), 0, 0)
+				center(z)
+				alignScopeToAxes(y)
+				Fence.BaseMiddleFootprint
+			case split.index==0:
+				s(scope.sx - 0.5*(Fence.main_depth - Fence.base_depth), '1, Fence.base_depth)
+				t(0.5*(Fence.main_depth - Fence.base_depth), 0, 0)
+				center(z)
+				alignScopeToAxes(y)
+				Fence.BaseMiddleFootprint
+			case split.index==split.total-2:
+				s(scope.sx + 0.5*(Fence.main_depth - Fence.base_depth), '1, Fence.base_depth)
+				center(z)
+				alignScopeToAxes(y)
+				Fence.BaseMiddleFootprint
+			else:
+				s('1, '1, Fence.base_depth)
+				center(z)
+				alignScopeToAxes(y)
+				Fence.BaseMiddleFootprint
+	else :
+		case Fence.hasPosts:
+			s(scope.sx + Fence.post_depth - Fence.upperPost_depth, '1, Fence.upperMiddle_depth)
+			center(xz)
+			alignScopeToAxes(y)
+			Fence.UpperMiddleFootprint
+		else:
+			case split.index==0 && split.index==split.total-2:
+				s('1, '1, Fence.upperMiddle_depth)
+				t(0.5*(Fence.main_depth - Fence.upper_depth), 0, 0)
+				center(z)
+				alignScopeToAxes(y)
+				Fence.UpperMiddleFootprint
+			case split.index==0:
+				s(scope.sx - 0.5*(Fence.main_depth - Fence.upper_depth), '1, Fence.upperMiddle_depth)
+				t(0.5*(Fence.main_depth - Fence.upper_depth), 0, 0)
+				center(z)
+				alignScopeToAxes(y)
+				Fence.UpperMiddleFootprint
+			case split.index==split.total-2:
+				s(scope.sx + 0.5*(Fence.main_depth - Fence.upper_depth), '1, Fence.upperMiddle_depth)
+				center(z)
+				alignScopeToAxes(y)
+				Fence.UpperMiddleFootprint
+			else:
+				s('1, '1, Fence.upperMiddle_depth)
+				center(z)
+				alignScopeToAxes(y)
+				Fence.UpperMiddleFootprint
+		
+// create end post if the footprint doesn't touch something (i.e. neighboring fence volume) 
+// type 	["base", "main", "upper"] base, main, or upper part of fence
+EndPost(type) -->
+	case touches(intra):
+		NIL
+	else:
+		case Fence.hasPosts:
+			case type == "base" :
+				Fence.BasePostFootprint
+			case type == "main" :
+				Fence.MainPostFootprint
+			else :
+				Fence.UpperPostFootprint
+		else:
+			case type == "base" :
+				Fence.BaseMiddleFootprint
+			case type == "main" :
+				Fence.MainMiddleFootprint
+			else :
+				Fence.UpperMiddleFootprint
+

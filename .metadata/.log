@@ -1,0 +1,24 @@
+!SESSION 2021-03-22 23:24:42.390 -----------------------------------------------
+eclipse.buildId=unknown
+java.version=1.8.0_151
+java.vendor=Oracle Corporation
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_US
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -data @noDefault -data C:\Users\Edward\Documents\CityEngine\Default Workspace\BC Updated Mar 22
+
+!ENTRY org.corebounce.rcp 1 0 2021-03-22 23:24:58.519
+!MESSAGE --------------------------------------------------- - [main]
+
+!ENTRY com.procedural.cityengine 1 0 2021-03-22 23:24:58.522
+!MESSAGE CityEngine 2019.1.5704 0903R, using workspace:C:/Users/Edward/Documents/CityEngine/Default Workspace/BC Updated Mar 22 - [main]
+
+!ENTRY org.python.pydev.core.corePlugin 1 0 2021-03-22 23:24:58.523
+!MESSAGE Rebuilding Python support files... - [Worker-1]
+
+!ENTRY com.esri.rulelib 1 0 2021-03-22 23:25:00.605
+!MESSAGE Rebuilding project 'ESRI.lib' - [Worker-1]
+
+!ENTRY org.eclipse.core.jobs 2 2 2021-03-22 23:25:24.630
+!MESSAGE Job found still running after platform shutdown.  Jobs should be canceled by the plugin that scheduled them during shutdown: org.eclipse.ui.internal.Workbench$63
+
+!ENTRY org.eclipse.core.jobs 2 2 2021-03-22 23:25:24.632
+!MESSAGE Job found still running after platform shutdown.  Jobs should be canceled by the plugin that scheduled them during shutdown: org.eclipse.ui.internal.Workbench$63
