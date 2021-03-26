@@ -12,14 +12,24 @@ import random
 import math
 import os
 import shutil
+import csv
 # get a CityEngine instance
 ce = CE()
 TileSize=608
 Resolution = 1
 #TileSize=8824
 STEP = Resolution * TileSize
-TURBINE_SIZES = [30, 60]
-NUM_SIZE_BINS = len(TURBINE_SIZES) - 1
+
+def get_turbine_scales(file_path):
+    turbine_scales = []
+    with open(ce.toFSPath(file_path)) as csvfile:
+        csvreader = csv.reader(csvfile)
+        for i, row in enumerate(csvreader):
+            if i == 0:
+                continue
+            turbine_scales.append(float(row[0]))
+
+    return turbine_scales
 
 def dynamic_attributes(adjust_list, params, dynamic_range, mode):
     '''
@@ -81,11 +91,6 @@ def dynamic_attributes(adjust_list, params, dynamic_range, mode):
 
     ce.setLighting(lightSettings)
 
-    if mode == 'GT':
-        return camera_elevation_angle
-
-    print("New parameters are: ", params)
-
     return (camera_elevation_angle, camera_azimuth_angle)
 
 '''
@@ -125,13 +130,9 @@ def parseFbxCam(filename):
 helper functions
 '''
 def setCamPosV(v, vec):
-    print('camera positions: {}'.format(vec))
     v.setCameraPosition(vec[0], vec[1], vec[2])
 
 def setCamRotV(v, vec):
-#    vec[1] = '-30'
-#    vec[2] = '0'
-    print('camera rotations: {}'.format(vec))
     v.setCameraRotation(vec[0], vec[1], vec[2])
 
 '''
@@ -141,7 +142,6 @@ def setCamData(data):
     v = ce.getObjectsFrom(ce.get3DViews(), ce.isViewport)[0]
     setCamPosV(v, data[0])
     setCamRotV(v, data[1])
-#    print(dir(v))
 #    exit(0)
     return v
 
@@ -199,9 +199,7 @@ def importFbxCamera(fbxfile, axis, angles, height):
         data[0][2] = str(new_j)
         data[1][0] = elevation_angle
         data[1][1] = azimuth_angle
-        print(data)
         v = setCamData(data)
-#        print(dir(v))
 #        print "Camera set to "+str(data)
         return v
     else:
@@ -241,22 +239,22 @@ def loop_capturer_dynamic_attributes(start_axis, end_axis, tag,
                                      mode='RGB', folder_name='test'):
 
     counter = 0
-    print('Start Shooting!')
+    # print('Start Shooting!')
     camfile = ce.toFSPath("data/camera.fbx") 
 #    height = setCamHeight(tile_width=TileSize)
     height = 2500
-    print("height: {}".format(height))
+    # print("height: {}".format(height))
     camera_angles = dynamic_attributes(adjust_list, params, dynamic_range, mode)
-    print("angle: {}".format(camera_angles))
-    print(start_axis[0], end_axis[0], STEP)
+    # print("angle: {}".format(camera_angles))
+    # print('taking capture of ', start_axis[0], end_axis[0], STEP)
     
     for i in drange(start_axis[0], end_axis[0], STEP): # x
         for j in drange(start_axis[1], end_axis[1], STEP): # z
 
             view = importFbxCamera(camfile, (i, j), camera_angles, height)
-            print('i, j ', i, j)
+            # print('i, j ', i, j)
             counter += 1
-            print(counter)
+            # print(counter)
             time.sleep(0.1) #time.sleep(0.02)
             
             if mode == 'RGB':
@@ -293,25 +291,24 @@ def load_rule_file(seed, rule_file_path, params=None):
     ce.generateModels(all_shapes)
     ce.waitForUIIdle()
     time.sleep(1)
-    print('load rules ok')
+    # print('load rules ok')
     
 '''
 ###############-----------------------------> RGB
 '''   
 def take_rgb_images(dt, sd, start_axis, end_axis, mode = 'RGB', parent_folder='', camera_angle=90):
-    print('start')
+    # print('start')
     start_time = time.time()
     tag='NE_wnd_sd{}'.format(sd) 
     folder_name='{}/{}_all_images_step{}'.format(parent_folder, dt, STEP)  
-    print(folder_name)
-    if not os.path.exists(ce.toFSPath('images/{}'.format(folder_name))):
-        os.makedirs(ce.toFSPath('images/{}'.format(folder_name)))
+    if not os.path.exists(os.path.join(ce.toFSPath('images/'), folder_name)):
+        os.makedirs(os.path.join(ce.toFSPath('images/'), folder_name))
     
 #        shutil.rmtree(ce.toFSPath('images/{}'.format(folder_name)))
     '''# ORGINAL'''
     loop_capturer_dynamic_attributes(start_axis=start_axis, end_axis=end_axis,
                                  tag=tag, mode=mode, folder_name=folder_name,)
-    print('Duration: {}'.format(time.time()-start_time)) 
+    # print('Duration: {}'.format(time.time()-start_time)) 
     
 '''
 ###############-----------------------------> GT
@@ -319,19 +316,19 @@ why for Francisco the color GT and the texture GT not consistent?????????
 '''   
 def take_gt_images(dt, sd, start_axis, end_axis, mode = 'GT', parent_folder='', camera_angle=90):
     
-    print('start')
+    # print('start')
     start_time = time.time()
     tag='NE_wnd_sd{}'.format(sd) 
     folder_name='{}/{}_all_annos_step{}'.format(parent_folder, dt, STEP)  
-    if not os.path.exists(ce.toFSPath('images/{}'.format(folder_name))):
-        os.makedirs(ce.toFSPath('images/{}'.format(folder_name)))
+    if not os.path.exists(os.path.join(ce.toFSPath('images/'), folder_name)):
+        os.makedirs(os.path.join(ce.toFSPath('images/'), folder_name))
 #        print('remove')
 #        shutil.rmtree(ce.toFSPath('images/{}'.format(folder_name)))
 #    print('removed')
     '''# ORGINAL'''
     loop_capturer_dynamic_attributes(start_axis=start_axis, end_axis=end_axis,
                                  tag=tag, mode=mode, folder_name=folder_name)
-    print('Duration: {}'.format(time.time()-start_time)) 
+    # print('Duration: {}'.format(time.time()-start_time)) 
     
 if __name__ == '__main__':
     '''
@@ -347,54 +344,42 @@ if __name__ == '__main__':
      light intensity is a random number in [0.5, 1]
 
     '''
+    print('starting...')
     
     display_type = ['color'] #, 'mixed'
-    rgb_rule_file = ['rules/yx_wind_turbine_color-bh_edited.cga'] #
-    gt_rule_file = ['rules/yx_wind_turbine_labeling_color-bh_edited.cga'] #
-    '''
-    start_axis=(80 + STEP//2, 48 + STEP//2)
-    end_axis=(640 - STEP//2, 608 - STEP//2)
-    '''
+    rgb_rule_file = 'rules/yx_wind_turbine_color-bh_edited.cga'
+    gt_rule_file = 'rules/yx_wind_turbine_labeling_color-bh_edited.cga'
     start_axis=(-304, -304)
     end_axis=(305, 305)
-    ite_num = 2 # 45
+
+    name = 'EM'
+    # ite_num = 2 
+    ite_num = len(os.listdir(ce.toFSPath('maps/EM')))
+    print('Found {} input images'.format(ite_num))
+
+    parent_folder = 'synthetic_wind_turbine_images/mar26_{}'.format(name)
+    print('saving outputs to {}'.format(parent_folder))
     
+    turbine_sizes = get_turbine_scales('data/scale_bins.csv')
     
-    '''rgb + gt'''
-    '''
-    seed = 0
-    random.seed(seed)
-    for dt in display_type:
-        for sd in range(ite_num):
-            print(sd)'''
-    
-    ''' rgb'''
-    rule_files = rgb_rule_file
+    # ''' rgb'''
+    rule = rgb_rule_file
     seed = 3
     random.seed(seed)
     
-    print('NUM_SIZE_BINS = {}'.format(NUM_SIZE_BINS))
-    
-    for dt in display_type:
-        for sd in range(ite_num):
-            print(sd)
-            #print(rule_files[display_type.index(dt)])
-            #print(display_type.index(dt))
-            #load_rule_file(sd, rule_files[display_type.index(dt)])
-#            random_rule = 'rules/yx_wind_turbine_color-bh_edited_bin{}.cga'.format(random.randint(0,19))
-#            print(random_rule)
-#            load_rule_file(sd, random_rule)
-            size_bin = random.randint(0, NUM_SIZE_BINS-1)
-            turbine_size_params = TURBINE_SIZES[size_bin]
-            rule = 'rules/yx_wind_turbine_labeling_color-bh_edited.cga'
-            print(rule)
-            load_rule_file(sd, rule, turbine_size_params)
-            parent_folder = 'synthetic_wind_turbine_images'
-            print(parent_folder)
-            # rgb
-            take_rgb_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
- 
-    print("DONE!")
+    try:
+        for dt in display_type:
+            for sd in range(ite_num):
+                scale_bin_idx = random.randint(0, len(turbine_sizes)-2)
+                print('Image {}, Turbine size bin {}'.format(sd, scale_bin_idx))
+                params = {'LenMinModelFW' : turbine_sizes[scale_bin_idx], 
+                            'LenMaxModelFW' : turbine_sizes[scale_bin_idx + 1]}
+                load_rule_file(sd, rule, params)
+                # rgb
+                take_rgb_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
+    except:
+        print('Exited')
+#   print("DONE!")
     
 #===============================================================================
 #    ''' gt'''
@@ -402,16 +387,11 @@ if __name__ == '__main__':
 #    seed = 3
 #    random.seed(seed)
 #    for dt in display_type:
-#        for sd in range(ite_num):
-#            #print(sd)
-#            #print(rule_files[display_type.index(dt)])
-#            #load_rule_file(sd, rule_files[display_type.index(dt)])
-#            random_rule = 'rules/yx_wind_turbine_labeling_color-bh_edited_bin{}.cga'.format(random.randint(0,19))
-#            print(random_rule)
-#            load_rule_file(sd, random_rule)
+#        for sd in range(ite_num):  
+#            turbine_size_params = {'LenMinModelFW' : 20, 'LenMaxModelFW' : 20}
+#            rule = 'rules/yx_wind_turbine_labeling_color-bh_edited.cga'
+#            load_rule_file(sd, rule, turbine_size_params)
 #            parent_folder = 'synthetic_wind_turbine_images'
-#            print(parent_folder)
-#            #gt      
 #            take_gt_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
 #             
 #===============================================================================

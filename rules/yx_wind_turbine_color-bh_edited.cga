@@ -17,21 +17,16 @@ version "2019.0"
 ##  RULES
 ##
 ##
-getRandomMap = fileRandom("maps/*.png")
+getRandomMap = fileRandom("maps/EM/*.jpg")
 # getRandomMap = fileRandom("maps/wnd_bkg/*.jpg")
 #getRandomMap = fileRandom("maps/uspp_naip/uspp_naip_noWND_rgb/uspp_naip_noWND_rgb/*.tif")
-
-
-attr LenMinModelFW = 0
-attr LenMaxModelFW = 0
 
 @StartRule
 Lot --> 
 	split(x){'1: FloorMap }
 # 	scatter(surface, 100, gaussian, center, '1) { WindTurbine }
 	scatter(scope, 10, uniform) { WindTurbine } 
-	extrude(LenMinModelFW)
-	extrude(LenMaxModelFW)
+	#scatter(scope, 5, uniform) { SmallWindTurbine }
 	
 FloorMap -->
 	setupProjection(0,scope.zx,'1,'1) projectUV(0)
@@ -42,8 +37,7 @@ FloorMap -->
 ## WindTurbines
 ##
 #getWND = fileRandom("models/*.glb")
-getWND = fileRandom("models/3d-model.obj")
-# getTRANS = fileRandom("models/Wind_Turbine.glb")
+getWND = fileRandom("models/Wind_Turbine.glb")
 getSmallWND = fileRandom("models/small_wind_turbine.glb")
 #getWND = fileRandom("wind_turbine/Wind_Turbine.glb")
 # getWND = fileRandom("models/small_wind_turbine.glb")
