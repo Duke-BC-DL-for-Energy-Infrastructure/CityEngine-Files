@@ -282,11 +282,13 @@ def loop_capturer_dynamic_attributes(start_axis, end_axis, tag,
 def load_rule_file(seed, rule_file_path, params=None):
 #    ge_models = ce.getObjectsFrom(ce.scene, ce.isModel)
 #    ce.cleanupShapes(ge_models)
+    print('loading stuff')
     all_shapes = ce.getObjectsFrom(ce.scene, ce.isShape)
     ce.setSeed(all_shapes, seed)
     if params:
         for attr, value in params.items():
             ce.setAttribute(all_shapes, attr, value)
+    print('set attributes')
     ce.setRuleFile(all_shapes, rule_file_path)
     ce.generateModels(all_shapes)
     ce.waitForUIIdle()
@@ -299,7 +301,7 @@ def load_rule_file(seed, rule_file_path, params=None):
 def take_rgb_images(dt, sd, start_axis, end_axis, mode = 'RGB', parent_folder='', camera_angle=90):
     # print('start')
     start_time = time.time()
-    tag='NE_wnd_sd{}'.format(sd) 
+    tag='EM_wnd_sd{}'.format(sd) 
     folder_name='{}/{}_all_images_step{}'.format(parent_folder, dt, STEP)  
     if not os.path.exists(os.path.join(ce.toFSPath('images/'), folder_name)):
         os.makedirs(os.path.join(ce.toFSPath('images/'), folder_name))
@@ -318,7 +320,7 @@ def take_gt_images(dt, sd, start_axis, end_axis, mode = 'GT', parent_folder='', 
     
     # print('start')
     start_time = time.time()
-    tag='NE_wnd_sd{}'.format(sd) 
+    tag='EM_wnd_sd{}'.format(sd) 
     folder_name='{}/{}_all_annos_step{}'.format(parent_folder, dt, STEP)  
     if not os.path.exists(os.path.join(ce.toFSPath('images/'), folder_name)):
         os.makedirs(os.path.join(ce.toFSPath('images/'), folder_name))
@@ -362,36 +364,37 @@ if __name__ == '__main__':
     
     turbine_sizes = get_turbine_scales('data/scale_bins.csv')
     
+#===============================================================================
     # ''' rgb'''
-    rule = rgb_rule_file
-    seed = 3
-    random.seed(seed)
+    # rule = rgb_rule_file
+    # seed = 3
+    # random.seed(seed)
     
-    try:
-        for dt in display_type:
-            for sd in range(ite_num):
-                scale_bin_idx = random.randint(0, len(turbine_sizes)-2)
-                print('Image {}, Turbine size bin {}'.format(sd, scale_bin_idx))
-                params = {'LenMinModelFW' : turbine_sizes[scale_bin_idx], 
-                            'LenMaxModelFW' : turbine_sizes[scale_bin_idx + 1]}
-                load_rule_file(sd, rule, params)
-                # rgb
-                take_rgb_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
-    except:
-        print('Exited')
+    # try:
+    #     for dt in display_type:
+    #         for sd in range(ite_num):
+    #             scale_bin_idx = random.randint(0, len(turbine_sizes)-2)
+    #             print('Image {}, Turbine size bin {}'.format(sd, scale_bin_idx))
+    #             params = {'LenMinModelFW' : turbine_sizes[scale_bin_idx], 
+    #                         'LenMaxModelFW' : turbine_sizes[scale_bin_idx + 1]}
+    #             load_rule_file(sd, rule, params)
+    #             take_rgb_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
+    # except:
+    #     print('Exited')
 #   print("DONE!")
-    
 #===============================================================================
 #    ''' gt'''
-#    rule_files = gt_rule_file
-#    seed = 3
-#    random.seed(seed)
-#    for dt in display_type:
-#        for sd in range(ite_num):  
-#            turbine_size_params = {'LenMinModelFW' : 20, 'LenMaxModelFW' : 20}
-#            rule = 'rules/yx_wind_turbine_labeling_color-bh_edited.cga'
-#            load_rule_file(sd, rule, turbine_size_params)
-#            parent_folder = 'synthetic_wind_turbine_images'
-#            take_gt_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
-#             
+    rule_files = gt_rule_file
+    seed = 3
+    random.seed(seed)
+
+    try:
+        for dt in display_type:
+            for sd in range(ite_num):  
+                scale_bin_idx = rav
+                load_rule_file(sd, rule, params)
+                take_gt_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
+    except:
+        print('Exited')
+                
 #===============================================================================

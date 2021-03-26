@@ -58,9 +58,9 @@ attr ModelMin = 0
 @Hidden
 attr ModelMax = 0
 @Hidden 
-attr LenMinModelFW = 30 # 12.5 # 11
+attr LenMinModelFW = 0
 @Hidden 
-attr LenMaxModelFW = 100 # 14 # 15
+attr LenMaxModelFW = 0
 
 @Hidden 
 attr smallLenMinModelFW = 100 # 12.5 # 11
