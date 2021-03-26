@@ -391,7 +391,11 @@ if __name__ == '__main__':
     try:
         for dt in display_type:
             for sd in range(ite_num):  
-                scale_bin_idx = rav
+                scale_bin_idx = random.randint(0, len(turbine_sizes)-2)
+                print('Image {}, Turbine size bin {}'.format(sd, scale_bin_idx))
+                params = {'LenMinModelFW' : turbine_sizes[scale_bin_idx], 
+                            'LenMaxModelFW' : turbine_sizes[scale_bin_idx + 1]}
+                print('I am here')
                 load_rule_file(sd, rule, params)
                 take_gt_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
     except:
