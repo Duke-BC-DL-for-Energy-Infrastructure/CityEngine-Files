@@ -245,7 +245,7 @@ def loop_capturer_dynamic_attributes(start_axis, end_axis, tag,
     height = 2500
     # print("height: {}".format(height))
     camera_angles = dynamic_attributes(adjust_list, params, dynamic_range, mode)
-    print("angle: {}".format(camera_angles))
+    print("camera elevation: {}".format(camera_angles[0][1:]))
     # print('taking capture of ', start_axis[0], end_axis[0], STEP)
     
     for i in drange(start_axis[0], end_axis[0], STEP): # x
@@ -300,7 +300,7 @@ def load_rule_file(seed, rule_file_path, params=None):
 def take_rgb_images(dt, sd, start_axis, end_axis, mode = 'RGB', parent_folder=''):
     # print('start')
     start_time = time.time()
-    tag='NE_wnd_sd{}'.format(sd) 
+    tag='NW_wnd_sd{}'.format(sd) 
     folder_name='{}/{}_all_images_step{}'.format(parent_folder, dt, STEP)  
     if not os.path.exists(os.path.join(ce.toFSPath('images/'), folder_name)):
         os.makedirs(os.path.join(ce.toFSPath('images/'), folder_name))
@@ -319,7 +319,7 @@ def take_gt_images(dt, sd, start_axis, end_axis, mode = 'GT', parent_folder=''):
     
     # print('start')
     start_time = time.time()
-    tag='NE_wnd_sd{}'.format(sd) 
+    tag='NW_wnd_sd{}'.format(sd) 
     folder_name='{}/{}_all_annos_step{}'.format(parent_folder, dt, STEP)  
     if not os.path.exists(os.path.join(ce.toFSPath('images/'), folder_name)):
         os.makedirs(os.path.join(ce.toFSPath('images/'), folder_name))
@@ -353,7 +353,7 @@ if __name__ == '__main__':
     start_axis=(-304, -304)
     end_axis=(305, 305)
 
-    name = 'NE'
+    name = 'NW_old'
     # ite_num = 2 
     ite_num = len(os.listdir(ce.toFSPath('maps/{}'.format(name))))
     print('Found {} input images'.format(ite_num))
@@ -363,39 +363,46 @@ if __name__ == '__main__':
     
     turbine_sizes = get_turbine_scales('data/scale_bins.csv')
     
+    ### toggle these
+    run_rgb = True
+    run_gt = not run_rgb
+    
+    
 #===============================================================================
     # ''' rgb'''
-    # seed = 3
-    # random.seed(seed)
-
-    # try:
-    #     for dt in display_type:
-    #         for sd in range(ite_num):
-    #             scale_bin_idx = random.randint(0, len(turbine_sizes)-2)
-    #             print('Image {}: turbine size bin {}'.format(sd, scale_bin_idx), end=", ")
-    #             params = {'LenMinModelFW' : turbine_sizes[scale_bin_idx], 
-    #                         'LenMaxModelFW' : turbine_sizes[scale_bin_idx + 1]}
-    #             load_rule_file(sd, rgb_rule_file, params)
-    #             take_rgb_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
-    # except:
-    #     print('Exited')
+    if run_rgb == True:
+        seed = 3
+        random.seed(seed)
+    
+        try:
+            for dt in display_type:
+                for sd in range(ite_num):
+                    scale_bin_idx = random.randint(0, len(turbine_sizes)-2)
+                    sys.stdout.write('Image {}: turbine size bin {}, '.format(sd, scale_bin_idx))
+                    params = {'LenMinModelFW' : turbine_sizes[scale_bin_idx], 
+                                'LenMaxModelFW' : turbine_sizes[scale_bin_idx + 1]}
+                    load_rule_file(sd, rgb_rule_file, params)
+                    take_rgb_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
+        except:
+            print('Exited')
 #===============================================================================
 #    ''' gt'''
-    seed = 3
-    random.seed(seed)
-
-    try:
-        for dt in display_type:
-            for sd in range(ite_num):  
-                scale_bin_idx = random.randint(0, len(turbine_sizes)-2)
-                # use sys.stdout to not print newline char
-                sys.stdout.write('Image {}: turbine size bin {}, '.format(sd, scale_bin_idx))
-                params = {'LenMinModelFW' : turbine_sizes[scale_bin_idx], 
-                            'LenMaxModelFW' : turbine_sizes[scale_bin_idx + 1]}
-                load_rule_file(sd, gt_rule_file, params)
-                take_gt_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
-    except:
-        print('Exited')
+    if run_gt == True:
+        seed = 3
+        random.seed(seed)
+    
+        try:
+            for dt in display_type:
+                for sd in range(ite_num):  
+                    scale_bin_idx = random.randint(0, len(turbine_sizes)-2)
+                    # use sys.stdout to not print newline char
+                    sys.stdout.write('Image {}: turbine size bin {}, '.format(sd, scale_bin_idx))
+                    params = {'LenMinModelFW' : turbine_sizes[scale_bin_idx], 
+                                'LenMaxModelFW' : turbine_sizes[scale_bin_idx + 1]}
+                    load_rule_file(sd, gt_rule_file, params)
+                    take_gt_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
+        except:
+            print('Exited')
                 
 #===============================================================================
 print('Done capturing')

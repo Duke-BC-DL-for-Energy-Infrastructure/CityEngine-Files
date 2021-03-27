@@ -17,7 +17,7 @@ version "2019.0"
 ##  RULES
 ##
 ##
-getRandomMap = fileRandom("maps/NE/*.jpg")
+getRandomMap = fileRandom("maps/NW_old/*.jpg")
 # getRandomMap = fileRandom("maps/wnd_bkg/*.jpg")
 #getRandomMap = fileRandom("maps/uspp_naip/uspp_naip_noWND_rgb/uspp_naip_noWND_rgb/*.tif")
 
