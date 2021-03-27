@@ -234,8 +234,8 @@ def exportGroundtruths2(directory, v, Tag=""):
 #                                     folder_name='test')
 def loop_capturer_dynamic_attributes(start_axis, end_axis, tag,
                                      adjust_list = ['ce', 'ca', 'la', 'li', 'ai', 'sa'],
-                                     params={'p90deg': 0.5, 'ce': 75, 'ca': 90, 'le': 50, 'la': 270, 'li': 1.0,'ai': 1.0, 'sa': 0.4},
-                                     dynamic_range={'ce':15, 'ca': 0.0, 'le': 0, 'la': 90, 'li': 0.0, 'ai': 0.0, 'sa': 0.0},
+                                     params={'p90deg': 1, 'ce': 75, 'ca': 90, 'le': 50, 'la': 0, 'li': 1.0,'ai': 0.5, 'sa': 0.5},
+                                     dynamic_range={'ce':15, 'ca': 0.0, 'le': 0, 'la': 180, 'li': 0.0, 'ai': 0.0, 'sa': 0.0},
                                      mode='RGB', folder_name='test'):
 
     counter = 0
@@ -363,9 +363,8 @@ if __name__ == '__main__':
     
     turbine_sizes = get_turbine_scales('data/scale_bins.csv')
     
-    ### TOGGLE THIS LINE
+    ### toggle these
     run_rgb = True
-    
     run_gt = not run_rgb
     
     
