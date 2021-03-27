@@ -234,8 +234,8 @@ def exportGroundtruths2(directory, v, Tag=""):
 #                                     folder_name='test')
 def loop_capturer_dynamic_attributes(start_axis, end_axis, tag,
                                      adjust_list = ['ce', 'ca', 'la', 'li', 'ai', 'sa'],
-                                     params={'p90deg': 0.5, 'ce': 75, 'ca': 90, 'le': 50, 'la': 90, 'li': 1.0,'ai': 1.0, 'sa': 0.4},
-                                     dynamic_range={'ce':15, 'ca': 0.0, 'le': 0, 'la': 270, 'li': 0.0, 'ai': 0.0, 'sa': 0.0},
+                                     params={'p90deg': 0.5, 'ce': 75, 'ca': 90, 'le': 50, 'la': 270, 'li': 1.0,'ai': 1.0, 'sa': 0.4},
+                                     dynamic_range={'ce':15, 'ca': 0.0, 'le': 0, 'la': 90, 'li': 0.0, 'ai': 0.0, 'sa': 0.0},
                                      mode='RGB', folder_name='test'):
 
     counter = 0
@@ -245,7 +245,7 @@ def loop_capturer_dynamic_attributes(start_axis, end_axis, tag,
     height = 2500
     # print("height: {}".format(height))
     camera_angles = dynamic_attributes(adjust_list, params, dynamic_range, mode)
-    # print("angle: {}".format(camera_angles))
+    print("angle: {}".format(camera_angles))
     # print('taking capture of ', start_axis[0], end_axis[0], STEP)
     
     for i in drange(start_axis[0], end_axis[0], STEP): # x
@@ -255,14 +255,14 @@ def loop_capturer_dynamic_attributes(start_axis, end_axis, tag,
             # print('i, j ', i, j)
             counter += 1
             # print(counter)
-            time.sleep(0.1) #time.sleep(0.02)
+            time.sleep(0.01) #time.sleep(0.02)
             
             if mode == 'RGB':
 #                lightSettings = ce.getLighting()
 #                lightSettings.setSolarElevationAngle(90)
 #                lightSettings.setSolarIntensity(0.3)
 #                ce.setLighting(lightSettings)
-                exportImages(ce.toFSPath('images/{}'.format(folder_name)), view, Tag=tag+'_'+str(counter))
+                exportImages(os.path.join(ce.toFSPath('images/'), folder_name), view, Tag=tag+'_'+str(counter))
 #                exportImages(ce.toFSPath('images/{}'.format(folder_name)), view, Tag=tag+'_'+str(counter))
 #                exportImages(ce.toFSPath('images/{}'.format(folder_name)), view, Tag=tag+'_'+str(counter))
             elif mode == 'GT':
@@ -271,8 +271,8 @@ def loop_capturer_dynamic_attributes(start_axis, end_axis, tag,
 #                lightSettings.setSolarIntensity(1)
 #                ce.setLighting(lightSettings)
                 ce.waitForUIIdle()
-                exportGroundtruths(ce.toFSPath('images/{}'.format(folder_name)), view, Tag=tag+'_'+str(counter))
-                exportGroundtruths(ce.toFSPath('images/{}'.format(folder_name)), view, Tag=tag+'_'+str(counter))
+                exportGroundtruths(os.path.join(ce.toFSPath('images/'), folder_name), view, Tag=tag+'_'+str(counter))
+#                exportGroundtruths(os.path.join(ce.toFSPath('images/'), folder_name)), view, Tag=tag+'_'+str(counter))
 #                exportGroundtruths(ce.toFSPath('images/{}'.format(folder_name)), view, Tag=tag+'_'+str(counter))
 
 
@@ -291,7 +291,7 @@ def load_rule_file(seed, rule_file_path, params=None):
     ce.generateModels(all_shapes)
     ce.waitForUIIdle()
 #    time.sleep(1)
-    time.sleep(0.1)
+    time.sleep(0.01)
     # print('load rules ok')
     
 '''
@@ -300,7 +300,7 @@ def load_rule_file(seed, rule_file_path, params=None):
 def take_rgb_images(dt, sd, start_axis, end_axis, mode = 'RGB', parent_folder=''):
     # print('start')
     start_time = time.time()
-    tag='EM_wnd_sd{}'.format(sd) 
+    tag='NE_wnd_sd{}'.format(sd) 
     folder_name='{}/{}_all_images_step{}'.format(parent_folder, dt, STEP)  
     if not os.path.exists(os.path.join(ce.toFSPath('images/'), folder_name)):
         os.makedirs(os.path.join(ce.toFSPath('images/'), folder_name))
@@ -319,7 +319,7 @@ def take_gt_images(dt, sd, start_axis, end_axis, mode = 'GT', parent_folder=''):
     
     # print('start')
     start_time = time.time()
-    tag='EM_wnd_sd{}'.format(sd) 
+    tag='NE_wnd_sd{}'.format(sd) 
     folder_name='{}/{}_all_annos_step{}'.format(parent_folder, dt, STEP)  
     if not os.path.exists(os.path.join(ce.toFSPath('images/'), folder_name)):
         os.makedirs(os.path.join(ce.toFSPath('images/'), folder_name))
@@ -353,9 +353,9 @@ if __name__ == '__main__':
     start_axis=(-304, -304)
     end_axis=(305, 305)
 
-    name = 'EM'
+    name = 'NE'
     # ite_num = 2 
-    ite_num = len(os.listdir(ce.toFSPath('maps/EM')))
+    ite_num = len(os.listdir(ce.toFSPath('maps/{}'.format(name))))
     print('Found {} input images'.format(ite_num))
 
     parent_folder = 'synthetic_wind_turbine_images/mar26_{}'.format(name)
@@ -365,14 +365,14 @@ if __name__ == '__main__':
     
 #===============================================================================
     # ''' rgb'''
-#     seed = 3
-#     random.seed(seed)
-    
+    # seed = 3
+    # random.seed(seed)
+
     # try:
     #     for dt in display_type:
     #         for sd in range(ite_num):
     #             scale_bin_idx = random.randint(0, len(turbine_sizes)-2)
-    #             print('Image {}, Turbine size bin {}'.format(sd, scale_bin_idx))
+    #             print('Image {}: turbine size bin {}'.format(sd, scale_bin_idx), end=", ")
     #             params = {'LenMinModelFW' : turbine_sizes[scale_bin_idx], 
     #                         'LenMaxModelFW' : turbine_sizes[scale_bin_idx + 1]}
     #             load_rule_file(sd, rgb_rule_file, params)
@@ -388,7 +388,8 @@ if __name__ == '__main__':
         for dt in display_type:
             for sd in range(ite_num):  
                 scale_bin_idx = random.randint(0, len(turbine_sizes)-2)
-                print('Image {}, Turbine size bin {}'.format(sd, scale_bin_idx))
+                # use sys.stdout to not print newline char
+                sys.stdout.write('Image {}: turbine size bin {}, '.format(sd, scale_bin_idx))
                 params = {'LenMinModelFW' : turbine_sizes[scale_bin_idx], 
                             'LenMaxModelFW' : turbine_sizes[scale_bin_idx + 1]}
                 load_rule_file(sd, gt_rule_file, params)
@@ -397,3 +398,4 @@ if __name__ == '__main__':
         print('Exited')
                 
 #===============================================================================
+print('Done capturing')
