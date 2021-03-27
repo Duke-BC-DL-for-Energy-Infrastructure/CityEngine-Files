@@ -282,23 +282,22 @@ def loop_capturer_dynamic_attributes(start_axis, end_axis, tag,
 def load_rule_file(seed, rule_file_path, params=None):
 #    ge_models = ce.getObjectsFrom(ce.scene, ce.isModel)
 #    ce.cleanupShapes(ge_models)
-    print('loading stuff')
     all_shapes = ce.getObjectsFrom(ce.scene, ce.isShape)
     ce.setSeed(all_shapes, seed)
     if params:
         for attr, value in params.items():
             ce.setAttribute(all_shapes, attr, value)
-    print('set attributes')
     ce.setRuleFile(all_shapes, rule_file_path)
     ce.generateModels(all_shapes)
     ce.waitForUIIdle()
-    time.sleep(1)
+#    time.sleep(1)
+    time.sleep(0.1)
     # print('load rules ok')
     
 '''
 ###############-----------------------------> RGB
 '''   
-def take_rgb_images(dt, sd, start_axis, end_axis, mode = 'RGB', parent_folder='', camera_angle=90):
+def take_rgb_images(dt, sd, start_axis, end_axis, mode = 'RGB', parent_folder=''):
     # print('start')
     start_time = time.time()
     tag='EM_wnd_sd{}'.format(sd) 
@@ -316,7 +315,7 @@ def take_rgb_images(dt, sd, start_axis, end_axis, mode = 'RGB', parent_folder=''
 ###############-----------------------------> GT
 why for Francisco the color GT and the texture GT not consistent?????????
 '''   
-def take_gt_images(dt, sd, start_axis, end_axis, mode = 'GT', parent_folder='', camera_angle=90):
+def take_gt_images(dt, sd, start_axis, end_axis, mode = 'GT', parent_folder=''):
     
     # print('start')
     start_time = time.time()
@@ -366,9 +365,8 @@ if __name__ == '__main__':
     
 #===============================================================================
     # ''' rgb'''
-    # rule = rgb_rule_file
-    # seed = 3
-    # random.seed(seed)
+#     seed = 3
+#     random.seed(seed)
     
     # try:
     #     for dt in display_type:
@@ -377,14 +375,12 @@ if __name__ == '__main__':
     #             print('Image {}, Turbine size bin {}'.format(sd, scale_bin_idx))
     #             params = {'LenMinModelFW' : turbine_sizes[scale_bin_idx], 
     #                         'LenMaxModelFW' : turbine_sizes[scale_bin_idx + 1]}
-    #             load_rule_file(sd, rule, params)
+    #             load_rule_file(sd, rgb_rule_file, params)
     #             take_rgb_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
     # except:
     #     print('Exited')
-#   print("DONE!")
 #===============================================================================
 #    ''' gt'''
-    rule_files = gt_rule_file
     seed = 3
     random.seed(seed)
 
@@ -395,8 +391,7 @@ if __name__ == '__main__':
                 print('Image {}, Turbine size bin {}'.format(sd, scale_bin_idx))
                 params = {'LenMinModelFW' : turbine_sizes[scale_bin_idx], 
                             'LenMaxModelFW' : turbine_sizes[scale_bin_idx + 1]}
-                print('I am here')
-                load_rule_file(sd, rule, params)
+                load_rule_file(sd, gt_rule_file, params)
                 take_gt_images(dt, sd, start_axis, end_axis, parent_folder=parent_folder)
     except:
         print('Exited')
