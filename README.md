@@ -21,3 +21,16 @@ If the code does not do anything (you don't see any output or the camera isn't m
 This repo should work as is, so keep track of anything you have changed, and that would likely be the source of any errors.
 
 One common error is the parent_folder (set default to images/synthetic_wind_turbine_images) doesn't exist, but as long as you have cloned this repo and haven't edited it, then that should not be an issue.
+
+## Current Branches
+### main
+Original script. Has a uniform distribution of turbine size that was chosen by judgement, approximately uniform from the minimum turbine size to the maximum turbine size.
+
+### modeled-size-distribution
+Has a wind turbine size distribution modeled off of the sizes of the all of the collected images we have. The script chooses from 20 different rules, which have their own uniform distrubtion of turbine sizes.
+
+### adjusted_lighting_dynamic_camera
+Firstly, the lighting settings (as set by the script) are updated to better approximate the real imagery we have. The script has a 50-50 chance to take the images from directly above the scene or to set the camera angle to a value between 60 and 90 degrees. In the case that the camera angle is changed, the camera is positioned away from the scene and the angle is changed so that it captures the same region but at an angle. This was implemented since we noticed that lots of the real imagery had the images taken at an angle where we could clearly see the pole of the turbine.
+
+### dynamic_size_mar24
+Most updated branch. Has the adjusted lighting and dynamic camera script changes, but also has a modeled turbine size distribution based off all of our imagery from the Northwest, Eastern Midwest, and Northeast, which are our current regions of interest.
